@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Neo Poker — Multiplayer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt-dark:#052e22; --felt:#0c4a36; --felt-light:#146b4f;
+    --rail:#3a2416; --rail-light:#5c3a24;
+    --gold:#d4af37; --gold-soft:#e8c766;
+    --cream:#f4ead9; --cream-dim:#c9bfa9;
+    --red-suit:#c0392b; --black-suit:#1c1c1c;
+    --hero:#d4af37; --villain:#a9455c;
+    --panel:#08201a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:radial-gradient(ellipse at top, #0e1a15, #050a08 70%); color:var(--cream); font-family:'Inter', sans-serif; min-height:100vh; display:flex; justify-content:center; padding:26px 14px 44px;}
+  .app{width:100%; max-width:860px;}
+  header{text-align:center; margin-bottom:18px;}
+  .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold-soft); opacity:.85;}
+  h1{font-family:'Fraunces', serif; font-weight:600; font-size:28px; margin:6px 0 4px;}
+  .subtitle{color:var(--cream-dim); font-size:13px;}
+  .conn-status{font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-align:center; margin-bottom:10px;}
+  .conn-status.ok{color:#7dc98f;} .conn-status.bad{color:#e08a9d;}
+
+  .join-box{background:var(--panel); border-radius:14px; padding:20px; box-shadow:inset 0 0 0 1px rgba(212,175,55,.15); max-width:400px; margin:0 auto;}
+  .join-box label{display:block; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--cream-dim); margin:12px 0 5px;}
+  .join-box input, .join-box select{width:100%; padding:10px; border-radius:8px; border:none; background:rgba(255,255,255,.08); color:var(--cream); font-family:'Inter'; font-size:14px;}
+  .join-box button{width:100%; margin-top:16px; padding:12px; border-radius:10px; border:none; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05; font-weight:600; font-size:14px; cursor:pointer;}
+
+  .setup-bar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .setup-item{flex:1; min-width:150px; background:var(--panel); border-radius:12px; padding:9px 14px; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .setup-item button{background:rgba(212,175,55,.18); color:var(--gold-soft); border:none; border-radius:8px; padding:7px 12px; font-size:12px; cursor:pointer; font-family:'Inter';}
+  .setup-item button:hover{background:rgba(212,175,55,.3);}
+
+  .table-frame{background:linear-gradient(180deg, var(--rail-light), var(--rail)); border-radius:24px; padding:12px; box-shadow:0 20px 50px -18px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.05);}
+  .table-felt{background:radial-gradient(ellipse at 50% 15%, var(--felt-light), var(--felt) 55%, var(--felt-dark) 100%); border-radius:16px; padding:20px 16px 18px; box-shadow:inset 0 0 60px rgba(0,0,0,.55), inset 0 0 0 2px rgba(212,175,55,.18);}
+
+  .seats-grid{display:flex; flex-wrap:wrap; justify-content:center; gap:12px 18px; margin-bottom:14px;}
+  .seat{display:flex; flex-direction:column; align-items:center; gap:5px; padding:6px; border-radius:12px; transition:box-shadow .3s; min-width:80px;}
+  .seat.active-turn{box-shadow:0 0 0 2px var(--gold-soft), 0 0 14px rgba(212,175,55,.5);}
+  .seat.folded{opacity:.35; filter:grayscale(.6);}
+  .seat.empty{opacity:.4;}
+  .seat.disconnected{opacity:.5;}
+  .seat.me .seat-label{color:var(--gold-soft);}
+  .seat-label{font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.1em; color:var(--cream-dim); display:flex; align-items:center; gap:4px; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pos-tag{background:rgba(212,175,55,.2); color:var(--gold-soft); border-radius:4px; padding:0 4px; font-size:8.5px; flex-shrink:0;}
+  .chip-count{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold-soft);}
+  .bet-chip{font-family:'IBM Plex Mono', monospace; font-size:10px; background:rgba(212,175,55,.15); color:var(--gold-soft); border-radius:8px; padding:1px 7px; min-height:14px;}
+  .empty-seat-btn{background:rgba(255,255,255,.06); border:1px dashed rgba(244,234,217,.3); color:var(--cream-dim); border-radius:8px; padding:8px 10px; font-size:11px; cursor:pointer; font-family:'IBM Plex Mono', monospace;}
+
+  .cards-row{display:flex; gap:5px;}
+  .card{width:42px; height:58px; background:#fbf8f2; border-radius:6px; box-shadow:0 6px 14px -4px rgba(0,0,0,.55); display:flex; flex-direction:column; justify-content:space-between; padding:3px 4px; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:11px; line-height:1;}
+  .card.red{color:var(--red-suit);} .card.black{color:var(--black-suit);}
+  .card .suit-big{align-self:center; font-size:15px;}
+  .card .corner{display:flex; flex-direction:column; align-items:flex-start; gap:1px;}
+  .card .corner.bottom{align-self:flex-end; transform:rotate(180deg);}
+  .card.board-slot{background:rgba(255,255,255,.06); box-shadow:inset 0 0 0 1.5px rgba(244,234,217,.22); opacity:.35;}
+  .card.face-down{background:repeating-linear-gradient(135deg, #7a2f40, #7a2f40 4px, #8f3a4d 4px, #8f3a4d 8px); box-shadow:0 6px 14px -4px rgba(0,0,0,.55), inset 0 0 0 2px rgba(244,234,217,.25);}
+  .seat.me .card{width:50px; height:70px; font-size:13px;}
+  .seat.me .card .suit-big{font-size:19px;}
+
+  .center-row{display:flex; flex-direction:column; align-items:center; gap:8px; margin:10px 0;}
+  .street-tag{font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold-soft); opacity:.9;}
+  .board-row{display:flex; gap:7px;}
+  .pot-display{font-family:'Fraunces', serif; font-weight:700; font-size:16px; color:var(--gold-soft); background:rgba(0,0,0,.25); padding:4px 14px; border-radius:20px; box-shadow:inset 0 0 0 1px rgba(212,175,55,.3);}
+  .my-equity{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--cream-dim); margin-top:6px; min-height:16px;}
+  .my-equity b{color:var(--gold-soft);}
+
+  .log-panel{margin-top:16px; background:var(--panel); border-radius:12px; padding:10px 14px; max-height:110px; overflow-y:auto; box-shadow:inset 0 0 0 1px rgba(212,175,55,.12);}
+  .log-title{font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--cream-dim); margin-bottom:6px;}
+  .log-line{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--cream-dim); line-height:1.7;}
+  .log-line.win{color:var(--gold-soft);}
+  .hist-entry{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--cream-dim); padding:5px 0; border-bottom:1px solid rgba(255,255,255,.05); line-height:1.6;}
+  .hist-entry .hist-head{color:var(--gold-soft);}
+
+  .action-bar{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+  .action-bar button{flex:1; min-width:90px; font-family:'Inter'; font-weight:600; font-size:13.5px; padding:12px 10px; border-radius:10px; border:none; cursor:pointer;}
+  .action-bar button:disabled{opacity:.35; cursor:not-allowed;}
+  .btn-fold{background:transparent; color:var(--cream); box-shadow:inset 0 0 0 1.5px rgba(244,234,217,.3);}
+  .btn-call{background:linear-gradient(180deg, #3f7a5e, #2b5943); color:var(--cream);}
+  .btn-raise{background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05;}
+  .primary-controls{display:flex; gap:10px; margin-top:12px;}
+  .primary-controls button{flex:1; font-family:'Inter'; font-weight:600; font-size:14px; padding:13px 16px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05;}
+  .result-banner{text-align:center; font-family:'Fraunces', serif; font-size:14px; margin-top:12px; padding:10px; border-radius:10px; min-height:18px; color:var(--cream-dim);}
+  .result-banner.info{background:rgba(255,255,255,.06); color:var(--cream);}
+  .error-toast{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:12px; color:#e08a9d; margin-top:8px; min-height:16px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow">Neo Poker Lab</div>
+    <h1>Multiplayer thật</h1>
+    <div class="subtitle">Kết nối cùng bạn bè qua mạng — Texas Hold'em</div>
+  </header>
+  <div class="conn-status" id="connStatus">Đang kết nối...</div>
+
+  <div id="joinScreen" class="join-box">
+    <label>Tên của bạn</label>
+    <input id="nameInput" maxlength="20" placeholder="Nhập tên hiển thị">
+    <label>Chip khởi điểm khi vào bàn</label>
+    <select id="chipSelect">
+      <option value="300">300</option>
+      <option value="500">500</option>
+      <option value="1000" selected>1,000</option>
+      <option value="2000">2,000</option>
+      <option value="5000">5,000</option>
+    </select>
+    <button id="joinBtn">Vào bàn</button>
+  </div>
+
+  <div id="gameScreen" style="display:none;">
+    <div class="setup-bar">
+      <div class="setup-item"><button id="addBotBtn">+ Thêm Bot vào ghế trống</button></div>
+    </div>
+
+    <div class="table-frame">
+      <div class="table-felt">
+        <div class="seats-grid" id="seatsGrid"></div>
+        <div class="center-row">
+          <div class="street-tag" id="streetTag">Chưa bắt đầu</div>
+          <div class="board-row" id="boardCards"></div>
+          <div class="pot-display" id="potDisplay">Pot: 0</div>
+        </div>
+        <div class="my-equity" id="myEquity">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="action-bar" id="actionBar" style="display:none;">
+      <button class="btn-fold" id="foldBtn">Fold</button>
+      <button class="btn-call" id="callBtn">Check</button>
+      <button class="btn-raise" id="raiseHalfBtn">Raise 1/2 Pot</button>
+      <button class="btn-raise" id="raisePotBtn">Raise Pot</button>
+      <button class="btn-raise" id="allInBtn">All-in</button>
+    </div>
+
+    <div class="primary-controls">
+      <button id="startBtn">Bắt đầu ván</button>
+    </div>
+
+    <div class="result-banner" id="resultBanner">&nbsp;</div>
+    <div class="error-toast" id="errorToast">&nbsp;</div>
+
+    <div class="log-panel">
+      <div class="log-title">Nhật ký ván đấu</div>
+      <div id="logLines"></div>
+    </div>
+    <div class="log-panel" style="max-height:200px;">
+      <div class="log-title">Lịch sử ván bài</div>
+      <div id="historyRows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RANK_LABEL={11:'J',12:'Q',13:'K',14:'A'};
+const SUIT_SYMBOL={S:'♠',H:'♥',D:'♦',C:'♣'};
+const SUIT_COLOR={S:'black',C:'black',H:'red',D:'red'};
+function rankLabel(r){return RANK_LABEL[r]||String(r);}
+function fmt(n){return n.toLocaleString('en-US');}
+
+let ws=null;
+let state=null;
+const STREET_LABELS=['Preflop','Flop','Turn','River','Ngã bài'];
+
+function connect(){
+  const proto = location.protocol==='https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto+'//'+location.host);
+  ws.onopen = ()=>{ document.getElementById('connStatus').textContent='Đã kết nối'; document.getElementById('connStatus').className='conn-status ok'; };
+  ws.onclose = ()=>{ document.getElementById('connStatus').textContent='Mất kết nối — đang thử lại...'; document.getElementById('connStatus').className='conn-status bad'; setTimeout(connect, 2000); };
+  ws.onerror = ()=>{};
+  ws.onmessage = (ev)=>{
+    const data = JSON.parse(ev.data);
+    if(data.type==='state'){ state=data.state; render(); }
+    else if(data.type==='error'){ showError(data.message); }
+  };
+}
+connect();
+
+function send(obj){ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+function showError(msg){
+  const el = document.getElementById('errorToast');
+  el.textContent = msg;
+  clearTimeout(showError._t);
+  showError._t = setTimeout(()=>{ el.textContent='\u00A0'; }, 3500);
+}
+
+document.getElementById('joinBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('nameInput').value.trim() || 'Người chơi';
+  const chips = document.getElementById('chipSelect').value;
+  send({type:'join', name, startingChips:chips});
+  document.getElementById('joinScreen').style.display='none';
+  document.getElementById('gameScreen').style.display='block';
+});
+document.getElementById('addBotBtn').addEventListener('click', ()=>{
+  const chips = document.getElementById('chipSelect').value || 1000;
+  send({type:'addBot', startingChips:chips});
+});
+document.getElementById('startBtn').addEventListener('click', ()=> send({type:'startHand'}) );
+document.getElementById('foldBtn').addEventListener('click', ()=> send({type:'action', action:'fold'}) );
+document.getElementById('callBtn').addEventListener('click', ()=> send({type:'action', action:'call'}) );
+document.getElementById('raiseHalfBtn').addEventListener('click', ()=>{
+  const desired = state.currentBet + Math.max(state.minRaise, Math.round((state.pot||0)*0.5) || 20);
+  send({type:'action', action:'raise', amount:desired});
+});
+document.getElementById('raisePotBtn').addEventListener('click', ()=>{
+  const desired = state.currentBet + Math.max(state.minRaise, state.pot || 20);
+  send({type:'action', action:'raise', amount:desired});
+});
+document.getElementById('allInBtn').addEventListener('click', ()=>{
+  const me = state.seats[state.mySeatIndex];
+  send({type:'action', action:'raise', amount: (me ? me.betThisRound + me.chips : 999999)});
+});
+
+function cardHTML(card){
+  if(!card) return `<div class="card board-slot"></div>`;
+  if(card.hidden) return `<div class="card face-down"></div>`;
+  const color = SUIT_COLOR[card.s];
+  return `<div class="card ${color}"><div class="corner"><span>${rankLabel(card.r)}</span><span>${SUIT_SYMBOL[card.s]}</span></div><div class="suit-big">${SUIT_SYMBOL[card.s]}</div><div class="corner bottom"><span>${rankLabel(card.r)}</span><span>${SUIT_SYMBOL[card.s]}</span></div></div>`;
+}
+
+function render(){
+  if(!state) return;
+  const seatsGrid = document.getElementById('seatsGrid');
+  seatsGrid.innerHTML='';
+  state.seats.forEach((p,i)=>{
+    const seat = document.createElement('div');
+    if(!p){
+      seat.className='seat empty';
+      seat.innerHTML = `<div class="seat-label">Ghế trống</div>`;
+      seatsGrid.appendChild(seat);
+      return;
+    }
+    seat.className='seat' + (i===state.mySeatIndex?' me':'') + (p.folded?' folded':'') + (!p.connected?' disconnected':'') + (state.actingIndex===i && state.inHand && !state.handOver?' active-turn':'');
+    let posTag='';
+    if(i===state.dealerIndex) posTag='<span class="pos-tag">D</span>';
+    else if(i===state.sbIndex) posTag='<span class="pos-tag">SB</span>';
+    else if(i===state.bbIndex) posTag='<span class="pos-tag">BB</span>';
+    const cardsHTML = p.cards.map(cardHTML).join('');
+    seat.innerHTML = `
+      <div class="seat-label">${p.isBot?'🤖 ':''}${p.name}${posTag}${!p.connected?' (mất kết nối)':''}${p.eliminated?' (out)':''}</div>
+      <div class="chip-count">${fmt(p.chips)}</div>
+      <div class="bet-chip">${p.betThisRound>0?fmt(p.betThisRound):'&nbsp;'}</div>
+      <div class="cards-row">${cardsHTML}</div>
+    `;
+    seatsGrid.appendChild(seat);
+  });
+
+  const boardEl = document.getElementById('boardCards');
+  boardEl.innerHTML='';
+  for(let i=0;i<5;i++) boardEl.innerHTML += cardHTML(state.board[i] || null);
+
+  document.getElementById('streetTag').textContent = state.handOver ? 'Ngã bài' : (state.inHand ? STREET_LABELS[state.street] : 'Chưa bắt đầu');
+  document.getElementById('potDisplay').textContent = 'Pot: ' + fmt(state.pot || 0);
+
+  const eqEl = document.getElementById('myEquity');
+  if(state.myEquity!==null && state.myEquity!==undefined){
+    eqEl.innerHTML = `Tỉ lệ thắng ước tính của bạn: <b>${state.myEquity.toFixed(1)}%</b>`;
+  } else { eqEl.innerHTML='&nbsp;'; }
+
+  const me = state.seats[state.mySeatIndex];
+  const isMyTurn = state.inHand && !state.handOver && state.actingIndex===state.mySeatIndex && me && !me.folded;
+  document.getElementById('actionBar').style.display = isMyTurn ? 'flex' : 'none';
+  document.getElementById('startBtn').style.display = (!state.inHand) ? 'block' : 'none';
+  if(isMyTurn){
+    const callAmt = state.myCallAmt || 0;
+    document.getElementById('callBtn').textContent = callAmt<=0 ? 'Check' : `Call ${fmt(Math.min(callAmt, me.chips))}`;
+    const canRaise = me.chips > Math.max(callAmt,0);
+    document.getElementById('raiseHalfBtn').disabled=!canRaise;
+    document.getElementById('raisePotBtn').disabled=!canRaise;
+  }
+
+  const banner = document.getElementById('resultBanner');
+  if(state.handOver && state.log.length){
+    banner.textContent = state.log[state.log.length-1];
+    banner.className='result-banner info';
+  } else { banner.textContent='\u00A0'; banner.className='result-banner'; }
+
+  const logEl = document.getElementById('logLines');
+  logEl.innerHTML='';
+  (state.log||[]).forEach(line=>{
+    const d=document.createElement('div');
+    d.className='log-line'+(line.includes('thắng')||line.includes('Chia')?' win':'');
+    d.textContent=line;
+    logEl.appendChild(d);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
+
+  const histEl = document.getElementById('historyRows');
+  histEl.innerHTML='';
+  if(!state.handHistory || state.handHistory.length===0){
+    histEl.innerHTML = '<div class="hist-entry">Chưa có ván nào kết thúc.</div>';
+  } else {
+    state.handHistory.forEach(rec=>{
+      const boardStr = rec.board.length ? rec.board.map(c=>rankLabel(c.r)+SUIT_SYMBOL[c.s]).join(' ') : '(kết thúc sớm)';
+      const deltas = rec.results.map(r=>`${r.name}: ${r.delta>0?'+':''}${fmt(r.delta)}`).join(' · ');
+      const el = document.createElement('div');
+      el.className='hist-entry';
+      el.innerHTML = `<span class="hist-head">Ván #${rec.handNumber}</span> — Bàn: ${boardStr} — Thắng: ${rec.winners.join(', ')}<br>${deltas}`;
+      histEl.appendChild(el);
+    });
+  }
+}
+</script>
+</body>
+</html>
