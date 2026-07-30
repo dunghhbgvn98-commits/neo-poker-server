@@ -178,7 +178,7 @@ function promoteTlQueue(stake){
   if(!game.queue || game.queue.length===0) return;
   let promoted = false;
   for(let i=0;i<4 && game.queue.length>0;i++){
-    if(!game.seats[i] || !game.seats[i].isBot) continue;
+    if(game.seats[i] && !game.seats[i].isBot) continue; // occupied by a real player — skip
     const next = game.queue.shift();
     let ownerConnId = null, connected = false;
     for(const [cws, cinfo] of clients){
@@ -195,6 +195,67 @@ function promoteTlQueue(stake){
     promoted = true;
   }
   if(promoted){ broadcastTlTable(stake); broadcastLobby(); }
+}
+
+// Kicking mid-hand can't safely restructure the engine's fixed seat indices right away,
+// so a human gets disconnected immediately (the existing auto-play tick takes over their
+// turns) while the actual seat-clear is deferred until the hand wraps up. A bot just gets
+// queued for removal the same way, since removing it mid-trick would also break seat indices.
+async function kickTlSeat(stake, seatIdx){
+  const game = tlGames[stake];
+  const p = game.seats[seatIdx];
+  if(!p) return {ok:false, reason:'Ghế này đang trống.'};
+  const name = p.name;
+
+  if(game.started && !game.gameOver){
+    if(!p.isBot){
+      p.connected = false;
+      for(const [cws, cinfo] of clients){
+        if(cinfo.tlStake===stake && cinfo.tlSeatIndex===seatIdx){
+          try{ cws.send(JSON.stringify({type:'kickedFromTable', message:'Bạn đã bị admin mời ra khỏi bàn.'})); }catch(e){}
+          cinfo.tlStake = null; cinfo.tlSeatIndex = null;
+        }
+      }
+    }
+    game.pendingKicks = game.pendingKicks || new Set();
+    game.pendingKicks.add(seatIdx);
+    broadcastTlTable(stake);
+    return {ok:true, name};
+  }
+
+  if(!p.isBot){
+    for(const [cws, cinfo] of clients){
+      if(cinfo.tlStake===stake && cinfo.tlSeatIndex===seatIdx){
+        try{ cws.send(JSON.stringify({type:'kickedFromTable', message:'Bạn đã bị admin mời ra khỏi bàn.'})); }catch(e){}
+        cinfo.tlStake = null; cinfo.tlSeatIndex = null;
+      }
+    }
+  }
+  game.seats[seatIdx] = null;
+  clearTlBotsIfNoHumans(stake);
+  broadcastTlTable(stake);
+  broadcastLobby();
+  return {ok:true, name};
+}
+
+// Clears any seats that were kicked mid-hand, and removes lingering bots once no
+// real player remains seated at the table (so an idle table doesn't sit there
+// forever "occupied" by bots with nobody actually playing).
+function clearTlBotsIfNoHumans(stake){
+  const game = tlGames[stake];
+  const anyHuman = game.seats.some(s=> s && !s.isBot);
+  if(!anyHuman){
+    for(let i=0;i<4;i++){ if(game.seats[i] && game.seats[i].isBot) game.seats[i] = null; }
+  }
+}
+
+function cleanupTlTableAfterHand(stake){
+  const game = tlGames[stake];
+  if(game.pendingKicks && game.pendingKicks.size){
+    for(const idx of game.pendingKicks) game.seats[idx] = null;
+    game.pendingKicks.clear();
+  }
+  clearTlBotsIfNoHumans(stake);
 }
 
 function broadcastLobby(){
@@ -286,6 +347,7 @@ async function settleTlHand(stake){
     await db.adjustChips(winnerSeat.userId, totalOwed); // winner is credited the full nominal total, even if some payers got clamped at 0
   }
   broadcastLeaderboard();
+  cleanupTlTableAfterHand(stake);
   broadcastTlTable(stake);
   promoteTlQueue(stake);
 }
@@ -350,6 +412,15 @@ async function creditBackAndClearSeat(stake, seatIdx){
     } catch(e){ console.error('[leave] credit-back failed:', e); }
   }
   game.seats[seatIdx] = null;
+  // If that was the last real player and no hand is in progress, clear out any
+  // remaining bots too — an empty table shouldn't sit there "occupied" by bots
+  // with nobody actually playing.
+  if(!game.inHand){
+    const anyHuman = game.seats.some(s=> s && !s.isBot);
+    if(!anyHuman){
+      for(let i=0;i<eng.MAX_SEATS;i++){ if(game.seats[i] && game.seats[i].isBot) game.seats[i] = null; }
+    }
+  }
 }
 
 /* ================= Message handling ================= */
@@ -416,7 +487,7 @@ async function handleMessage(ws, info, raw){
     if(!stake) return;
     const game = games[stake];
     const seatIdx = game.seats.findIndex(s=>s && s.token===data.token && s.userId===info.userId);
-    if(seatIdx===-1){ ws.send(JSON.stringify({type:'rejoinFailed'})); return; }
+    if(seatIdx===-1){ ws.send(JSON.stringify({type:'rejoinFailed', stake})); return; }
     const key = stake+':'+seatIdx;
     if(seatDisconnectTimers[key]){ clearTimeout(seatDisconnectTimers[key]); delete seatDisconnectTimers[key]; }
     game.seats[seatIdx].connected = true;
@@ -549,6 +620,7 @@ async function handleMessage(ws, info, raw){
     }
     if(game.seats[info.tlSeatIndex]) game.seats[info.tlSeatIndex] = null;
     info.tlStake = null; info.tlSeatIndex = null;
+    clearTlBotsIfNoHumans(stake);
     ws.send(JSON.stringify({type:'tlLeft'}));
     broadcastTlTable(stake);
     broadcastLobby();
@@ -611,6 +683,17 @@ async function handleMessage(ws, info, raw){
     return;
   }
 
+  if(data.type==='adminKickTlPlayer'){
+    if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
+    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    const seatIdx = Number(data.seatIndex);
+    if(!stake || isNaN(seatIdx)){ ws.send(JSON.stringify({type:'error', message:'Thông tin không hợp lệ.'})); return; }
+    const res = await kickTlSeat(stake, seatIdx);
+    if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
+    ws.send(JSON.stringify({type:'adminActionResult', ok:true, message:`Đã kick ${res.name} khỏi bàn Tiến Lên.`}));
+    return;
+  }
+
   if(data.type==='reaction'){
     if(info.tableStake===null || info.tableStake===undefined || info.seatIndex===null) return;
     const ALLOWED_EMOJI = ['👍','😂','😮','🔥','😢','🤔','👏','😎'];
@@ -643,6 +726,12 @@ async function handleMessage(ws, info, raw){
 
   if(data.type==='spinSlots'){
     try{
+      const user = await db.getUserById(info.userId);
+      if(!user){ ws.send(JSON.stringify({type:'error', message:'Không tìm thấy tài khoản.'})); return; }
+      if(user.chips < SPIN_COST){
+        ws.send(JSON.stringify({type:'error', message:`Bạn cần tối thiểu ${SPIN_COST} chip để quay (hiện có ${user.chips}).`}));
+        return;
+      }
       const consume = await db.checkAndConsumeSpin(info.userId);
       if(!consume.ok){
         ws.send(JSON.stringify({type:'error', message: consume.reason}));
@@ -650,26 +739,34 @@ async function handleMessage(ws, info, raw){
         ws.send(JSON.stringify({type:'slotsStatus', jackpot: jp, spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
         return;
       }
-      const result = performSpin();
-      const seedAdd = 15 + Math.floor(Math.random()*26); // +15..40 chips into the pool per spin
-      let jackpotNow = await db.addToJackpot(seedAdd);
+
+      // Charge the spin cost up front (this is what feeds the jackpot pool now — spins are no longer free).
+      const balanceAfterCost = await db.adjustChips(info.userId, -SPIN_COST);
+      if(balanceAfterCost===null){ ws.send(JSON.stringify({type:'error', message:'Lỗi trừ chip, thử lại sau.'})); return; }
+
+      let jackpotNow = await db.addToJackpot(SPIN_COST);
       if(jackpotNow===null){
         ws.send(JSON.stringify({type:'error', message:'Không cập nhật được hũ jackpot — kiểm tra lại đã chạy file supabase-migration-slots.sql trên database chưa.'}));
+        // refund the spin cost since we couldn't actually process the spin
+        await db.adjustChips(info.userId, SPIN_COST);
         return;
       }
+
+      const result = performSpin();
       let wonAmount = 0;
-      if(result.jackpotHit){
-        wonAmount = jackpotNow;
-        const user = await db.getUserById(info.userId);
-        if(user){ await db.updateChips(info.userId, user.chips + wonAmount); }
-        await db.resetJackpot(JACKPOT_RESET_BASE);
-        jackpotNow = JACKPOT_RESET_BASE;
+      let finalChips = balanceAfterCost;
+      if(result.tier==='big' || result.tier==='small'){
+        const payoutPct = result.tier==='big' ? BIG_JACKPOT_PAYOUT_PCT : SMALL_JACKPOT_PAYOUT_PCT;
+        wonAmount = Math.round(jackpotNow * payoutPct);
+        jackpotNow = jackpotNow - wonAmount; // remainder stays in the pool, never resets to zero
+        const newBal = await db.adjustChips(info.userId, wonAmount);
+        if(newBal!==null) finalChips = newBal;
       }
-      const freshUser = await db.getUserById(info.userId);
+
       ws.send(JSON.stringify({
-        type:'spinResult', symbols: result.symbols, jackpotHit: result.jackpotHit, wonAmount,
+        type:'spinResult', symbols: result.symbols, tier: result.tier, wonAmount,
         jackpot: jackpotNow, spinsRemaining: consume.spinsRemaining,
-        chips: freshUser ? freshUser.chips : null
+        chips: finalChips, spinCost: SPIN_COST
       }));
       broadcastJackpot(jackpotNow);
       broadcastLeaderboard();
@@ -698,6 +795,21 @@ async function handleMessage(ws, info, raw){
     if(newBalance===null){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật chip, thử lại sau.'})); return; }
     ws.send(JSON.stringify({type:'adminAdjustResult', ok:true, username:targetUser.username, newBalance, delta}));
     broadcastLeaderboard();
+    return;
+  }
+
+  if(data.type==='adminSetJackpot'){
+    if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
+    const amount = Number(data.amount);
+    if(!Number.isFinite(amount) || amount < 0){
+      ws.send(JSON.stringify({type:'error', message:'Số chip không hợp lệ.'}));
+      return;
+    }
+    const rounded = Math.round(amount);
+    const ok = await db.resetJackpot(rounded);
+    if(!ok){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật hũ jackpot, thử lại sau.'})); return; }
+    ws.send(JSON.stringify({type:'adminActionResult', ok:true, message:`Đã đặt hũ jackpot thành ${rounded} chip.`}));
+    broadcastJackpot(rounded);
     return;
   }
 
@@ -767,14 +879,31 @@ async function broadcastLeaderboard(){
 }
 setInterval(()=>{ broadcastLeaderboard(); }, 8000);
 
-const SLOT_SYMBOLS = ['🍒','🍋','🍇','🔔','💎','7️⃣'];
-const JACKPOT_HIT_CHANCE = 1/150;
-const JACKPOT_RESET_BASE = 500;
+const SLOT_SYMBOLS = ['🍒','🍋','🍇','🔔','💎'];
+const SPIN_COST = 50;
+const BIG_JACKPOT_CHANCE = 0.005;   // 0.5%
+const SMALL_JACKPOT_CHANCE = 0.05;  // 5%
+const BIG_JACKPOT_PAYOUT_PCT = 0.90;
+const SMALL_JACKPOT_PAYOUT_PCT = 0.10;
+
+function randomFruitSymbol(){ return SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)]; }
 function performSpin(){
-  const jackpotHit = Math.random() < JACKPOT_HIT_CHANCE;
-  if(jackpotHit) return { symbols:['7️⃣','7️⃣','7️⃣'], jackpotHit:true };
-  const symbols = [0,0,0].map(()=> SLOT_SYMBOLS[Math.floor(Math.random()*(SLOT_SYMBOLS.length-1))]); // exclude 7 from random (reserved for jackpot)
-  return { symbols, jackpotHit:false };
+  const roll = Math.random();
+  if(roll < BIG_JACKPOT_CHANCE){
+    return { symbols:['7️⃣','7️⃣','7️⃣'], tier:'big' };
+  }
+  if(roll < BIG_JACKPOT_CHANCE + SMALL_JACKPOT_CHANCE){
+    const sym = randomFruitSymbol();
+    return { symbols:[sym,sym,sym], tier:'small' };
+  }
+  // No win — pick 3 random symbols, but reroll if they accidentally all match
+  // (would look like a win to the player even though it isn't one).
+  let symbols;
+  for(let attempt=0; attempt<10; attempt++){
+    symbols = [randomFruitSymbol(), randomFruitSymbol(), randomFruitSymbol()];
+    if(!(symbols[0]===symbols[1] && symbols[1]===symbols[2])) break;
+  }
+  return { symbols, tier:'none' };
 }
 function broadcastJackpot(amount){
   for(const [cws] of clients){
@@ -840,6 +969,7 @@ wss.on('connection', (ws)=>{
             tlP.connected = false;
           } else {
             tlGame.seats[info.tlSeatIndex] = null;
+            clearTlBotsIfNoHumans(tlStake);
           }
           broadcastTlTable(tlStake);
           broadcastLobby();
