@@ -156,6 +156,7 @@ async function handleMessage(ws, info, raw){
     if(!r.ok){ ws.send(JSON.stringify({type:'authError', message:r.reason})); return; }
     applyAuth(info, r.user);
     ws.send(JSON.stringify({type:'authOk', username:r.user.username, chips:r.user.chips, isAdmin:!!r.user.is_admin}));
+    computeLeaderboard().then(entries=> ws.send(JSON.stringify({type:'leaderboard', entries}))).catch(()=>{});
     return;
   }
   if(data.type==='login'){
@@ -163,6 +164,7 @@ async function handleMessage(ws, info, raw){
     if(!r.ok){ ws.send(JSON.stringify({type:'authError', message:r.reason})); return; }
     applyAuth(info, r.user);
     ws.send(JSON.stringify({type:'authOk', username:r.user.username, chips:r.user.chips, isAdmin:!!r.user.is_admin}));
+    computeLeaderboard().then(entries=> ws.send(JSON.stringify({type:'leaderboard', entries}))).catch(()=>{});
     return;
   }
 
@@ -234,6 +236,7 @@ async function handleMessage(ws, info, raw){
     ws.send(JSON.stringify({type:'leftTable', chips: freshUser ? freshUser.chips : null}));
     broadcastTable(stake);
     broadcastLobby();
+    broadcastLeaderboard();
     return;
   }
 
@@ -301,6 +304,103 @@ async function handleMessage(ws, info, raw){
     }
     return;
   }
+
+  if(data.type==='getSlotsStatus'){
+    const jackpot = await db.getJackpot();
+    const spinsRemaining = await db.getSpinsRemaining(info.userId);
+    ws.send(JSON.stringify({type:'slotsStatus', jackpot, spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+    return;
+  }
+
+  if(data.type==='spinSlots'){
+    const consume = await db.checkAndConsumeSpin(info.userId);
+    if(!consume.ok){
+      ws.send(JSON.stringify({type:'error', message: consume.reason}));
+      ws.send(JSON.stringify({type:'slotsStatus', jackpot: await db.getJackpot(), spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+      return;
+    }
+    const result = performSpin();
+    const seedAdd = 15 + Math.floor(Math.random()*26); // +15..40 chips into the pool per spin
+    let jackpotNow = await db.addToJackpot(seedAdd);
+    let wonAmount = 0;
+    if(result.jackpotHit && jackpotNow!==null){
+      wonAmount = jackpotNow;
+      const user = await db.getUserById(info.userId);
+      if(user){ await db.updateChips(info.userId, user.chips + wonAmount); }
+      await db.resetJackpot(JACKPOT_RESET_BASE);
+      jackpotNow = JACKPOT_RESET_BASE;
+    }
+    const freshUser = await db.getUserById(info.userId);
+    ws.send(JSON.stringify({
+      type:'spinResult', symbols: result.symbols, jackpotHit: result.jackpotHit, wonAmount,
+      jackpot: jackpotNow, spinsRemaining: consume.spinsRemaining,
+      chips: freshUser ? freshUser.chips : null
+    }));
+    broadcastJackpot(jackpotNow);
+    broadcastLeaderboard();
+    return;
+  }
+
+  if(data.type==='adminAdjustChips'){
+    if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
+    const targetUsername = (data.username||'').trim();
+    const delta = Number(data.delta);
+    if(!targetUsername || !Number.isFinite(delta) || delta===0){
+      ws.send(JSON.stringify({type:'error', message:'Thông tin không hợp lệ.'}));
+      return;
+    }
+    const targetUser = await db.getUserByUsername(targetUsername);
+    if(!targetUser){ ws.send(JSON.stringify({type:'error', message:'Không tìm thấy người chơi.'})); return; }
+    if(targetUser.is_admin){ ws.send(JSON.stringify({type:'error', message:'Không thể chỉnh chip của tài khoản admin.'})); return; }
+    // Adjustment always applies to the DB balance only (the "money not currently at a table" pool).
+    // If the player is mid-game at a table, their visible stack there is unaffected until they leave —
+    // this avoids double-applying the delta to both pools at once.
+    const newBalance = await db.adjustChips(targetUser.id, delta);
+    if(newBalance===null){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật chip, thử lại sau.'})); return; }
+    ws.send(JSON.stringify({type:'adminAdjustResult', ok:true, username:targetUser.username, newBalance, delta}));
+    broadcastLeaderboard();
+    return;
+  }
+}
+
+async function computeLeaderboard(limit=15){
+  const users = await db.getAllNonAdminUsers();
+  const totals = new Map();
+  users.forEach(u=> totals.set(u.id, {username:u.username, total:u.chips}));
+  TABLE_STAKES.forEach(stake=>{
+    const game = games[stake];
+    for(const seat of game.seats){
+      if(seat && !seat.isBot && seat.userId && totals.has(seat.userId)){
+        totals.get(seat.userId).total += seat.chips;
+      }
+    }
+  });
+  return [...totals.values()].sort((a,b)=> b.total - a.total).slice(0, limit);
+}
+async function broadcastLeaderboard(){
+  let entries;
+  try{ entries = await computeLeaderboard(); } catch(e){ console.error('[leaderboard] compute failed:', e); return; }
+  for(const [cws] of clients){
+    if(cws.readyState !== WebSocket.OPEN) continue;
+    try{ cws.send(JSON.stringify({type:'leaderboard', entries})); } catch(e){}
+  }
+}
+setInterval(()=>{ broadcastLeaderboard(); }, 8000);
+
+const SLOT_SYMBOLS = ['🍒','🍋','🍇','🔔','💎','7️⃣'];
+const JACKPOT_HIT_CHANCE = 1/150;
+const JACKPOT_RESET_BASE = 500;
+function performSpin(){
+  const jackpotHit = Math.random() < JACKPOT_HIT_CHANCE;
+  if(jackpotHit) return { symbols:['7️⃣','7️⃣','7️⃣'], jackpotHit:true };
+  const symbols = [0,0,0].map(()=> SLOT_SYMBOLS[Math.floor(Math.random()*(SLOT_SYMBOLS.length-1))]); // exclude 7 from random (reserved for jackpot)
+  return { symbols, jackpotHit:false };
+}
+function broadcastJackpot(amount){
+  for(const [cws] of clients){
+    if(cws.readyState !== WebSocket.OPEN) continue;
+    try{ cws.send(JSON.stringify({type:'jackpotUpdate', amount})); } catch(e){}
+  }
 }
 
 function applyAuth(info, user){
@@ -332,6 +432,9 @@ wss.on('connection', (ws)=>{
   const info = { id, userId:null, username:null, isAdmin:false, tableStake:null, seatIndex:null, spectating:null };
   clients.set(ws, info);
   ws.send(JSON.stringify({type:'lobby', tables: lobbySnapshot()}));
+  db.getJackpot().then(amount=>{
+    if(amount!==null && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:'jackpotUpdate', amount}));
+  }).catch(()=>{});
 
   ws.on('message', (msg)=>{
     handleMessage(ws, info, msg).catch(e=>{
@@ -368,6 +471,7 @@ wss.on('connection', (ws)=>{
         await creditBackAndClearSeat(stake, seatIdx);
         broadcastTable(stake);
         broadcastLobby();
+        broadcastLeaderboard();
       }
       delete seatDisconnectTimers[key];
     }, RECONNECT_GRACE_MS);

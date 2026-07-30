@@ -64,7 +64,94 @@ function createDb(supabase){
     if(error) console.error('[db] ensureAdmin insert failed:', error.message);
   }
 
-  return { registerUser, loginUser, updateChips, getUserById, ensureAdmin, validUsername };
+  /* ================= Slots / jackpot ================= */
+  const DAILY_SPIN_LIMIT = 10;
+
+  function todayStr(){
+    return new Date().toISOString().slice(0,10); // YYYY-MM-DD, UTC-based day
+  }
+
+  async function getJackpot(){
+    const { data, error } = await supabase.from('jackpot').select('amount').eq('id',1).maybeSingle();
+    if(error || !data) return null;
+    return data.amount;
+  }
+
+  async function addToJackpot(delta){
+    const current = await getJackpot();
+    if(current===null) return null;
+    const next = current + delta;
+    const { error } = await supabase.from('jackpot').update({amount:next}).eq('id',1);
+    if(error) return null;
+    return next;
+  }
+
+  async function resetJackpot(baseAmount){
+    const { error } = await supabase.from('jackpot').update({amount:baseAmount}).eq('id',1);
+    return !error;
+  }
+
+  // Checks the user's daily spin count (resetting it if it's a new day),
+  // and if they still have spins left, consumes one and returns {ok:true, spinsRemaining}.
+  // If they're out of spins for today, returns {ok:false, reason, spinsRemaining:0}.
+  async function checkAndConsumeSpin(userId){
+    const user = await getUserById(userId);
+    if(!user) return {ok:false, reason:'Không tìm thấy tài khoản.', spinsRemaining:0};
+    const today = todayStr();
+    let spinsToday = user.spins_today || 0;
+    if(user.last_spin_date !== today){
+      spinsToday = 0; // new day, counter resets
+    }
+    if(spinsToday >= DAILY_SPIN_LIMIT){
+      return {ok:false, reason:`Bạn đã dùng hết ${DAILY_SPIN_LIMIT} lượt quay hôm nay, quay lại vào ngày mai nhé!`, spinsRemaining:0};
+    }
+    spinsToday += 1;
+    const { error } = await supabase.from('users').update({spins_today:spinsToday, last_spin_date:today}).eq('id', userId);
+    if(error) return {ok:false, reason:'Lỗi cập nhật lượt quay: '+error.message, spinsRemaining: DAILY_SPIN_LIMIT-(user.spins_today||0)};
+    return {ok:true, spinsRemaining: DAILY_SPIN_LIMIT - spinsToday};
+  }
+
+  async function getSpinsRemaining(userId){
+    const user = await getUserById(userId);
+    if(!user) return 0;
+    const today = todayStr();
+    const spinsToday = (user.last_spin_date===today) ? (user.spins_today||0) : 0;
+    return Math.max(0, DAILY_SPIN_LIMIT - spinsToday);
+  }
+
+  /* ================= Leaderboard / admin chip management ================= */
+
+  // Returns ALL non-admin users with just the fields needed for the leaderboard.
+  // Fetching everyone (not just a DB-side top-N) because a user's TRUE total also
+  // includes chips currently in play at a table, which the caller merges in afterward —
+  // so we can't rely on DB-only ordering to decide who's "top".
+  async function getAllNonAdminUsers(){
+    const { data, error } = await supabase.from('users').select('id,username,chips,is_admin').eq('is_admin', false);
+    if(error) return [];
+    return data || [];
+  }
+
+  async function getUserByUsername(username){
+    const { data, error } = await supabase.from('users').select('*').ilike('username', (username||'').trim()).maybeSingle();
+    if(error) return null;
+    return data;
+  }
+
+  // Adjusts a user's DB chip balance by `delta` (can be negative). Clamped at 0.
+  // Returns the new balance, or null if the user doesn't exist / update failed.
+  async function adjustChips(userId, delta){
+    const user = await getUserById(userId);
+    if(!user) return null;
+    const next = Math.max(0, Math.round(user.chips + delta));
+    const ok = await updateChips(userId, next);
+    return ok ? next : null;
+  }
+
+  return {
+    registerUser, loginUser, updateChips, getUserById, ensureAdmin, validUsername,
+    getJackpot, addToJackpot, resetJackpot, checkAndConsumeSpin, getSpinsRemaining, DAILY_SPIN_LIMIT,
+    getAllNonAdminUsers, getUserByUsername, adjustChips
+  };
 }
 
 module.exports = { createDb };
