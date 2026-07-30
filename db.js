@@ -99,18 +99,37 @@ function createDb(supabase){
     return data.amount;
   }
 
+  // Atomically adjusts the jackpot pool via the increment_jackpot(delta) RPC function
+  // (SECURITY DEFINER on the Postgres side), instead of a plain client-side read-then-write
+  // .update() call. This avoids two problems with the old approach:
+  //   1. RLS on the `jackpot` table blocking the anon key's UPDATE (the RPC runs with the
+  //      function owner's privileges, bypassing that).
+  //   2. A race condition between concurrent spins each doing their own read-then-write.
+  // `delta` can be positive (adding to the pool) or negative (paying out a win).
   async function addToJackpot(delta){
-    const current = await getJackpot();
-    if(current===null) return null; // lastJackpotError already set by getJackpot above
-    const next = current + delta;
-    const { error } = await supabase.from('jackpot').update({amount:next}).eq('id',1);
+    const { data, error } = await supabase.rpc('increment_jackpot', { delta });
     if(error){
-      lastJackpotError = `Lỗi ghi vào bảng "jackpot": ${error.message} (code: ${error.code||'?'}) — có thể do Row Level Security (RLS) đang chặn quyền UPDATE của anon key.`;
-      console.error('[jackpot] addToJackpot update error:', error);
+      lastJackpotError = `Lỗi gọi RPC "increment_jackpot": ${error.message} (code: ${error.code||'?'})`;
+      console.error('[jackpot] increment_jackpot RPC error:', error);
+      return null;
+    }
+    // supabase-js can hand back a scalar, a single-row array, or an object depending on
+    // how the function is declared — handle the common shapes defensively.
+    let newAmount = null;
+    if(typeof data === 'number') newAmount = data;
+    else if(Array.isArray(data) && data.length>0){
+      const row = data[0];
+      newAmount = (typeof row === 'number') ? row : (row.new_amount ?? row.amount ?? row.increment_jackpot ?? null);
+    } else if(data && typeof data === 'object'){
+      newAmount = data.new_amount ?? data.amount ?? null;
+    }
+    if(newAmount===null || !Number.isFinite(Number(newAmount))){
+      lastJackpotError = 'RPC "increment_jackpot" chạy thành công nhưng không trả về số hợp lệ. Kiểm tra lại định nghĩa hàm trên Supabase.';
+      console.error('[jackpot] increment_jackpot returned unexpected shape:', data);
       return null;
     }
     lastJackpotError = null;
-    return next;
+    return Number(newAmount);
   }
 
   async function resetJackpot(baseAmount){

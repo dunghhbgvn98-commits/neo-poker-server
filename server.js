@@ -758,7 +758,16 @@ async function handleMessage(ws, info, raw){
       if(result.tier==='big' || result.tier==='small'){
         const payoutPct = result.tier==='big' ? BIG_JACKPOT_PAYOUT_PCT : SMALL_JACKPOT_PAYOUT_PCT;
         wonAmount = Math.round(jackpotNow * payoutPct);
-        jackpotNow = jackpotNow - wonAmount; // remainder stays in the pool, never resets to zero
+        // Actually persist the deduction via the same atomic RPC (previously this was only
+        // computed in a local variable and never written back to the database — a real bug
+        // where the pool shown/reset never matched what was stored).
+        const poolAfterPayout = await db.addToJackpot(-wonAmount);
+        if(poolAfterPayout===null){
+          console.error('[spinSlots] jackpot deduction failed to persist after a win:', db.getLastJackpotError());
+          jackpotNow = jackpotNow - wonAmount; // best-effort local fallback for this response only
+        } else {
+          jackpotNow = poolAfterPayout;
+        }
         const newBal = await db.adjustChips(info.userId, wonAmount);
         if(newBal!==null) finalChips = newBal;
         recordJackpotWin(info.username, result.tier, wonAmount);
