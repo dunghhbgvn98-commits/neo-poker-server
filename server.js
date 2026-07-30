@@ -713,7 +713,7 @@ async function handleMessage(ws, info, raw){
       const jackpot = await db.getJackpot();
       const spinsRemaining = await db.getSpinsRemaining(info.userId);
       if(jackpot===null){
-        ws.send(JSON.stringify({type:'error', message:'Không đọc được hũ jackpot từ database — kiểm tra lại đã chạy file supabase-migration-slots.sql chưa.'}));
+        ws.send(JSON.stringify({type:'error', message:'Không đọc được hũ jackpot. Chi tiết: ' + (db.getLastJackpotError() || 'không rõ nguyên nhân') }));
         return;
       }
       ws.send(JSON.stringify({type:'slotsStatus', jackpot, spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT, jackpotHistory}));
@@ -746,7 +746,7 @@ async function handleMessage(ws, info, raw){
 
       let jackpotNow = await db.addToJackpot(SPIN_COST);
       if(jackpotNow===null){
-        ws.send(JSON.stringify({type:'error', message:'Không cập nhật được hũ jackpot — kiểm tra lại đã chạy file supabase-migration-slots.sql trên database chưa.'}));
+        ws.send(JSON.stringify({type:'error', message:'Không cập nhật được hũ jackpot. Chi tiết: ' + (db.getLastJackpotError() || 'không rõ nguyên nhân') }));
         // refund the spin cost since we couldn't actually process the spin
         await db.adjustChips(info.userId, SPIN_COST);
         return;
@@ -808,7 +808,7 @@ async function handleMessage(ws, info, raw){
     }
     const rounded = Math.round(amount);
     const ok = await db.resetJackpot(rounded);
-    if(!ok){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật hũ jackpot, thử lại sau.'})); return; }
+    if(!ok){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật hũ jackpot. Chi tiết: ' + (db.getLastJackpotError() || 'không rõ nguyên nhân') })); return; }
     ws.send(JSON.stringify({type:'adminActionResult', ok:true, message:`Đã đặt hũ jackpot thành ${rounded} chip.`}));
     broadcastJackpot(rounded);
     return;

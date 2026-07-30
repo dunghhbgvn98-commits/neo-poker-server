@@ -80,24 +80,48 @@ function createDb(supabase){
     return new Date().toISOString().slice(0,10); // YYYY-MM-DD, UTC-based day
   }
 
+  let lastJackpotError = null;
+  function getLastJackpotError(){ return lastJackpotError; }
+
   async function getJackpot(){
     const { data, error } = await supabase.from('jackpot').select('amount').eq('id',1).maybeSingle();
-    if(error || !data) return null;
+    if(error){
+      lastJackpotError = `Lỗi đọc bảng "jackpot": ${error.message} (code: ${error.code||'?'})`;
+      console.error('[jackpot] getJackpot error:', error);
+      return null;
+    }
+    if(!data){
+      lastJackpotError = 'Bảng "jackpot" tồn tại nhưng không có dòng dữ liệu nào (id=1). Chạy lại phần INSERT trong file migration.';
+      console.error('[jackpot] getJackpot: no row found with id=1');
+      return null;
+    }
+    lastJackpotError = null;
     return data.amount;
   }
 
   async function addToJackpot(delta){
     const current = await getJackpot();
-    if(current===null) return null;
+    if(current===null) return null; // lastJackpotError already set by getJackpot above
     const next = current + delta;
     const { error } = await supabase.from('jackpot').update({amount:next}).eq('id',1);
-    if(error) return null;
+    if(error){
+      lastJackpotError = `Lỗi ghi vào bảng "jackpot": ${error.message} (code: ${error.code||'?'}) — có thể do Row Level Security (RLS) đang chặn quyền UPDATE của anon key.`;
+      console.error('[jackpot] addToJackpot update error:', error);
+      return null;
+    }
+    lastJackpotError = null;
     return next;
   }
 
   async function resetJackpot(baseAmount){
     const { error } = await supabase.from('jackpot').update({amount:baseAmount}).eq('id',1);
-    return !error;
+    if(error){
+      lastJackpotError = `Lỗi ghi vào bảng "jackpot": ${error.message} (code: ${error.code||'?'})`;
+      console.error('[jackpot] resetJackpot error:', error);
+      return false;
+    }
+    lastJackpotError = null;
+    return true;
   }
 
   // Checks the user's daily spin count (resetting it if it's a new day),
@@ -148,7 +172,7 @@ function createDb(supabase){
   return {
     registerUser, loginUser, updateChips, getUserById, ensureAdmin, validUsername,
     getJackpot, addToJackpot, resetJackpot, checkAndConsumeSpin, getSpinsRemaining, DAILY_SPIN_LIMIT,
-    getAllNonAdminUsers, getUserByUsername, adjustChips, deleteUser
+    getAllNonAdminUsers, getUserByUsername, adjustChips, deleteUser, getLastJackpotError
   };
 }
 
