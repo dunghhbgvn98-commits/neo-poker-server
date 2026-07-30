@@ -765,7 +765,6 @@
         <div class="jackpot-display">
           <div class="jackpot-label">HŨ JACKPOT HIỆN TẠI</div>
           <div class="jackpot-amount" id="jackpotAmount">...</div>
-          <button class="lb-edit-btn hidden" id="adminEditJackpotBtn" style="margin-top:6px;" title="Chỉnh hũ jackpot (admin)">✏️ Chỉnh hũ (admin)</button>
         </div>
         <div class="reels-row" id="reelsRow">
           <div class="reel"><div class="reel-symbol" id="reel0">🍒</div></div>
@@ -1162,30 +1161,16 @@ function confirmDeleteAccount(username){
 
 function openAdminChipModal(username){
   sfxClick();
-  document.getElementById('adminChipModal').dataset.mode = 'user';
   document.getElementById('modalTargetName').textContent = 'Người chơi: ' + username;
   document.getElementById('modalDeltaInput').value = '';
   document.getElementById('modalDeltaInput').placeholder = 'vd: 5000 hoặc -2000';
   document.getElementById('modalError').textContent = '\u00A0';
   document.getElementById('adminChipModal').dataset.targetUsername = username;
-  document.querySelector('.modal-quick-btns').style.display = '';
   document.getElementById('adminChipModal').classList.remove('hidden');
 }
-function openAdminJackpotModal(){
-  sfxClick();
-  document.getElementById('adminChipModal').dataset.mode = 'jackpot';
-  document.getElementById('modalTargetName').textContent = 'Hũ Jackpot — nhập số chip CHÍNH XÁC muốn đặt';
-  document.getElementById('modalDeltaInput').value = currentJackpot || '';
-  document.getElementById('modalDeltaInput').placeholder = 'vd: 1000';
-  document.getElementById('modalError').textContent = '\u00A0';
-  document.querySelector('.modal-quick-btns').style.display = 'none';
-  document.getElementById('adminChipModal').classList.remove('hidden');
-}
-document.getElementById('adminEditJackpotBtn').addEventListener('click', openAdminJackpotModal);
 document.getElementById('modalCancelBtn').addEventListener('click', ()=>{
   sfxClick();
   document.getElementById('adminChipModal').classList.add('hidden');
-  document.querySelector('.modal-quick-btns').style.display = '';
 });
 document.querySelectorAll('.modal-quick-btns button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -1196,16 +1181,6 @@ document.querySelectorAll('.modal-quick-btns button').forEach(btn=>{
 });
 document.getElementById('modalConfirmBtn').addEventListener('click', ()=>{
   sfxClick();
-  const mode = document.getElementById('adminChipModal').dataset.mode || 'user';
-  if(mode==='jackpot'){
-    const amount = parseInt(document.getElementById('modalDeltaInput').value, 10);
-    if(isNaN(amount) || amount<0){
-      document.getElementById('modalError').textContent = 'Nhập số chip hợp lệ (>= 0).';
-      return;
-    }
-    send({type:'adminSetJackpot', amount});
-    return;
-  }
   const username = document.getElementById('adminChipModal').dataset.targetUsername;
   const delta = parseInt(document.getElementById('modalDeltaInput').value, 10);
   if(!delta || isNaN(delta)){
@@ -1260,7 +1235,6 @@ document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
       document.getElementById('slotsUsername').textContent = me.username;
       document.getElementById('slotsAvatarInitial').textContent = me.username.charAt(0).toUpperCase();
       document.getElementById('slotsChips').textContent = fmt(me.chips);
-      document.getElementById('adminEditJackpotBtn').classList.toggle('hidden', !me.isAdmin);
       send({type:'getSlotsStatus'});
     } else if(which==='tienlen'){
       document.getElementById('lobbyScreen').classList.add('hidden');
