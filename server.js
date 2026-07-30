@@ -2,7 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
-const eng = require('./engine.js');
+const eng = require('./poker-engine.js');
+const tlEng = require('./tienlen-engine.js');
 
 const TABLE_STAKES = [1000, 5000, 10000];
 const RECONNECT_GRACE_MS = 3 * 60 * 1000;
@@ -13,6 +14,14 @@ const ADMIN_USERNAME = opts.adminUsername || 'admin';
 /* ================= Multi-table game state ================= */
 const games = {};
 TABLE_STAKES.forEach(stake => { games[stake] = eng.createGame(); });
+
+const tlGames = {};
+TABLE_STAKES.forEach(stake => {
+  const g = tlEng.createGame();
+  g.stakeForScoring = stake;
+  g.queue = []; // [{userId, username, connId}]
+  tlGames[stake] = g;
+});
 const botTimers = {};       // stake -> timeout handle
 const seatDisconnectTimers = {}; // `${stake}:${seatIndex}` -> timeout handle
 const equityCache = {};     // stake -> {sig, map}
@@ -36,6 +45,18 @@ let nextClientId = 1;
 //         tableStake, seatIndex, spectating (stake or null)}
 
 function findFreeSeat(game){ for(let i=0;i<eng.MAX_SEATS;i++) if(!game.seats[i]) return i; return -1; }
+
+const BOT_NAME_POOL = [
+  'Minh Anh','Hoàng Long','Thu Trang','Quốc Bảo','Ngọc Hà','Đức Huy','Phương Linh','Tuấn Kiệt',
+  'Bảo Châu','Gia Hưng','Thanh Tùng','Kim Ngân','Việt Anh','Mai Phương','Đình Khang','Thảo Vy',
+  'Xuân Sơn','Hồng Nhung','Tấn Phát','Lan Anh','Trọng Nghĩa','Yến Nhi','Công Danh','Bích Ngọc',
+  'Hữu Phước','Diệu Linh','Anh Quân','Ngọc Ánh','Thiên Ân','Khánh Vy'
+];
+function pickBotName(existingNames){
+  const available = BOT_NAME_POOL.filter(n => !existingNames.includes(n));
+  const pool = available.length ? available : BOT_NAME_POOL;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 
 /* ================= State broadcasting ================= */
 function publicStateFor(stake, game, viewerSeatIndex, isAdminSpectator){
@@ -78,6 +99,18 @@ function lobbySnapshot(){
   });
   return out;
 }
+function tlLobbySnapshot(){
+  const out = {};
+  TABLE_STAKES.forEach(stake=>{
+    const g = tlGames[stake];
+    out[stake] = {
+      seatsFilled: tlEng.seatedIndices(g).length,
+      maxSeats: 4,
+      inHand: g.started && !g.gameOver
+    };
+  });
+  return out;
+}
 
 function broadcastTable(stake){
   const game = games[stake];
@@ -94,11 +127,82 @@ function broadcastTable(stake){
     } catch(e){ console.error('[broadcast] failed:', e); }
   }
 }
-function broadcastLobby(){
-  const snap = lobbySnapshot();
+
+function tlPublicStateFor(stake, game, viewerSeatIndex, isAdminSpectator){
+  const revealAll = isAdminSpectator && viewerSeatIndex===null;
+  return {
+    stake,
+    started: game.started,
+    gameOver: game.gameOver,
+    winnerSeat: game.winnerSeat,
+    actingIndex: game.actingIndex,
+    trickTop: game.trickTop,
+    trickTopSeat: game.trickTopSeat,
+    lastPlays: game.lastPlays,
+    settleResults: game.gameOver ? game.settleResults : null,
+    isAdminSpectator: !!revealAll,
+    mySeatIndex: viewerSeatIndex,
+    mustIncludeThreeSpades: !!game.mustIncludeThreeSpades,
+    turnDeadline: game.turnDeadline || null,
+    seats: game.seats.map((p,i)=>{
+      if(!p) return null;
+      const revealHand = revealAll || i===viewerSeatIndex || game.gameOver;
+      return {
+        index:i, name:p.name, isBot:!!p.isBot, finished:!!p.finished,
+        cardCount: p.hand ? p.hand.length : 0,
+        hand: revealHand ? (p.hand||[]) : null
+      };
+    }),
+    log: (game.log||[]).slice(-12)
+  };
+}
+function broadcastTlTable(stake){
+  const game = tlGames[stake];
   for(const [ws, info] of clients){
     if(ws.readyState !== WebSocket.OPEN) continue;
-    try{ ws.send(JSON.stringify({type:'lobby', tables: snap})); } catch(e){}
+    const watchingThis = info.tlStake===stake || info.tlSpectating===stake;
+    if(!watchingThis) continue;
+    const isAdminSpectator = !!(info.isAdmin && info.tlSpectating===stake && info.tlStake!==stake);
+    try{
+      const state = tlPublicStateFor(stake, game, info.tlStake===stake ? info.tlSeatIndex : null, isAdminSpectator);
+      state.queueLength = game.queue.length;
+      state.myQueuePosition = (info.tlStake===stake && (info.tlSeatIndex===null || info.tlSeatIndex===undefined))
+        ? (game.queue.findIndex(q=>q.userId===info.userId)+1) : null;
+      ws.send(JSON.stringify({ type:'tlState', state }));
+    } catch(e){ console.error('[tl broadcast] failed:', e); }
+  }
+}
+
+function promoteTlQueue(stake){
+  const game = tlGames[stake];
+  if(!game.queue || game.queue.length===0) return;
+  let promoted = false;
+  for(let i=0;i<4 && game.queue.length>0;i++){
+    if(!game.seats[i] || !game.seats[i].isBot) continue;
+    const next = game.queue.shift();
+    let ownerConnId = null, connected = false;
+    for(const [cws, cinfo] of clients){
+      if(cinfo.userId===next.userId && cinfo.tlStake===stake && cws.readyState===WebSocket.OPEN){
+        cinfo.tlSeatIndex = i;
+        ownerConnId = cinfo.id;
+        connected = true;
+      }
+    }
+    game.seats[i] = {
+      name: next.username, isBot:false, userId: next.userId, hand:[], finished:false,
+      hasPlayedAnyCard:false, connected, ownerConnId
+    };
+    promoted = true;
+  }
+  if(promoted){ broadcastTlTable(stake); broadcastLobby(); }
+}
+
+function broadcastLobby(){
+  const snap = lobbySnapshot();
+  const tlSnap = tlLobbySnapshot();
+  for(const [ws, info] of clients){
+    if(ws.readyState !== WebSocket.OPEN) continue;
+    try{ ws.send(JSON.stringify({type:'lobby', tables: snap, tlTables: tlSnap})); } catch(e){}
   }
 }
 
@@ -124,6 +228,68 @@ function maybeRunBot(stake){
   }, 700 + Math.random()*600);
 }
 
+// Robust bot/disconnected-player/timed-out-human turn driver: a persistent interval
+// per table polls every 400ms and checks wall-clock time, rather than chaining
+// setTimeout calls recursively (which occasionally lost a scheduled turn).
+const tlPendingAction = {}; // stake -> {idx, at} | null
+function tlBotTick(stake){
+  const game = tlGames[stake];
+  if(!game.started || game.gameOver){ tlPendingAction[stake] = null; return; }
+  const idx = game.actingIndex;
+  if(idx===-1){ tlPendingAction[stake] = null; return; }
+  const p = game.seats[idx];
+  if(!p){ tlPendingAction[stake] = null; return; }
+
+  const isConnectedHuman = (p.isBot === false && p.connected !== false);
+  let forcedByTimeout = false;
+
+  if(isConnectedHuman){
+    if(!game.turnDeadline || Date.now() < game.turnDeadline){ tlPendingAction[stake] = null; return; }
+    forcedByTimeout = true; // their 15s ran out — act on their behalf
+  } else {
+    const pending = tlPendingAction[stake];
+    if(!pending || pending.idx !== idx){
+      tlPendingAction[stake] = { idx, at: Date.now() + 500 + Math.random()*500 };
+      return;
+    }
+    if(Date.now() < pending.at) return;
+    tlPendingAction[stake] = null;
+  }
+
+  try{
+    const move = tlEng.botChooseMove(p.hand, game.trickTop, game.mustIncludeThreeSpades);
+    const res = move===null ? tlEng.passTurn(game, idx) : tlEng.playCombo(game, idx, move.map(c=>tlEng.cardKey(c)));
+    if(!res.ok) console.error('[tl bot] action failed:', res.reason);
+    else if(forcedByTimeout) game.log.push({seat:idx, name:p.name, action:'timeout'});
+    broadcastTlTable(stake);
+    if(game.gameOver) settleTlHand(stake).catch(e=>console.error('[tl settle] error:', e));
+  } catch(e){ console.error('[tl bot tick] exception:', e); }
+}
+TABLE_STAKES.forEach(stake => setInterval(()=> tlBotTick(stake), 400));
+// No-op shim: older call sites just "nudge" after an action; the ticker above does the real work.
+function maybeRunTlBot(stake){}
+
+// Applies each losing player's payment directly to DB balances (bots don't have DB accounts, so they're skipped).
+async function settleTlHand(stake){
+  const game = tlGames[stake];
+  if(!game.settleResults) return;
+  const winnerSeat = game.seats[game.winnerSeat];
+  let totalCollected = 0;
+  for(const r of game.settleResults){
+    const p = game.seats[r.seat];
+    if(p.isBot || !p.userId) continue;
+    const newBal = await db.adjustChips(p.userId, -r.pay);
+    if(newBal!==null) totalCollected += r.pay; // only count what was actually collectible (adjustChips clamps at 0)
+  }
+  if(winnerSeat && !winnerSeat.isBot && winnerSeat.userId){
+    const totalOwed = game.settleResults.reduce((s,r)=>s+r.pay,0);
+    await db.adjustChips(winnerSeat.userId, totalOwed); // winner is credited the full nominal total, even if some payers got clamped at 0
+  }
+  broadcastLeaderboard();
+  broadcastTlTable(stake);
+  promoteTlQueue(stake);
+}
+
 /* ================= Chip <-> account sync ================= */
 // Design: a player's DB balance represents money NOT currently at any table.
 // Buy-in is deducted from DB balance the moment they join a table.
@@ -132,6 +298,46 @@ function maybeRunBot(stake){
 // We deliberately do NOT sync mid-session after every hand — that would require
 // subtracting the buy-in back out again and is easy to get wrong; leave-time
 // settlement keeps the accounting simple and provably correct.
+// Forcibly removes whoever is in a seat (admin action): folds them out of an in-progress
+// hand if needed, notifies their live connection so the client returns to the lobby,
+// credits their chips back to their DB balance immediately (no grace/reconnect period —
+// this is a deliberate admin action, not a network drop), and clears the seat.
+async function kickSeat(stake, seatIdx){
+  const game = games[stake];
+  const p = game.seats[seatIdx];
+  if(!p) return {ok:false, reason:'Ghế này đang trống.'};
+  const name = p.name;
+
+  if(game.inHand && !p.folded){
+    if(game.actingIndex===seatIdx){
+      eng.processAction(game, seatIdx, 'fold');
+      maybeRunBot(stake);
+    } else {
+      p.folded = true;
+      game.needToAct.delete(seatIdx);
+      if(game.needToAct.size===0) eng.advanceStreets(game);
+    }
+  }
+
+  if(!p.isBot){
+    for(const [cws, cinfo] of clients){
+      if(cinfo.tableStake===stake && cinfo.seatIndex===seatIdx){
+        try{ cws.send(JSON.stringify({type:'kickedFromTable', message:'Bạn đã bị admin mời ra khỏi bàn.'})); }catch(e){}
+        cinfo.tableStake = null;
+        cinfo.seatIndex = null;
+      }
+    }
+    const key = stake+':'+seatIdx;
+    if(seatDisconnectTimers[key]){ clearTimeout(seatDisconnectTimers[key]); delete seatDisconnectTimers[key]; }
+  }
+
+  await creditBackAndClearSeat(stake, seatIdx);
+  broadcastTable(stake);
+  broadcastLobby();
+  broadcastLeaderboard();
+  return {ok:true, name};
+}
+
 async function creditBackAndClearSeat(stake, seatIdx){
   const game = games[stake];
   const p = game.seats[seatIdx];
@@ -171,7 +377,7 @@ async function handleMessage(ws, info, raw){
   if(!info.userId){ ws.send(JSON.stringify({type:'authError', message:'Bạn cần đăng nhập trước.'})); return; }
 
   if(data.type==='getLobby'){
-    ws.send(JSON.stringify({type:'lobby', tables: lobbySnapshot()}));
+    ws.send(JSON.stringify({type:'lobby', tables: lobbySnapshot(), tlTables: tlLobbySnapshot()}));
     return;
   }
 
@@ -247,8 +453,9 @@ async function handleMessage(ws, info, raw){
     const seatIdx = findFreeSeat(game);
     if(seatIdx===-1) return;
     const personalities=['tight','balanced','loose'];
+    const existingNames = game.seats.filter(s=>s).map(s=>s.name);
     game.seats[seatIdx] = {
-      name:`Bot ${seatIdx}`, isBot:true, personality:personalities[Math.floor(Math.random()*3)],
+      name: pickBotName(existingNames), isBot:true, personality:personalities[Math.floor(Math.random()*3)],
       chips: stake, cards:[], folded:false, allIn:false, betThisRound:0, betThisHand:0,
       eliminated:false, connected:true
     };
@@ -291,6 +498,119 @@ async function handleMessage(ws, info, raw){
     return;
   }
 
+  /* ---- Tiến Lên ---- */
+  if(data.type==='joinTlTable'){
+    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    if(!stake){ ws.send(JSON.stringify({type:'error', message:'Mức bàn không hợp lệ.'})); return; }
+    if(info.tlStake!==null && info.tlStake!==undefined){ ws.send(JSON.stringify({type:'error', message:'Bạn đang ở bàn Tiến Lên khác, hãy rời bàn trước.'})); return; }
+    const game = tlGames[stake];
+    const seatIdx = game.seats.findIndex(s=>!s);
+    const canSeatDirectly = seatIdx!==-1 && !(game.started && !game.gameOver);
+    if(canSeatDirectly){
+      game.seats[seatIdx] = { name: info.username, isBot:false, userId: info.userId, hand:[], finished:false, hasPlayedAnyCard:false, connected:true, ownerConnId: info.id };
+      info.tlStake = stake;
+      info.tlSeatIndex = seatIdx;
+      info.tlSpectating = null;
+      ws.send(JSON.stringify({type:'tlJoined', stake, seatIndex:seatIdx}));
+      broadcastTlTable(stake);
+      broadcastLobby();
+      return;
+    }
+    // Table full or a hand is in progress: join the waiting queue instead of being
+    // turned away. They can watch the table and get auto-seated (replacing a bot)
+    // as soon as the current hand ends.
+    if(game.queue.some(q=>q.userId===info.userId)){
+      ws.send(JSON.stringify({type:'error', message:'Bạn đã ở trong hàng chờ của bàn này rồi.'}));
+      return;
+    }
+    game.queue.push({ userId: info.userId, username: info.username, connId: info.id });
+    info.tlStake = stake;
+    info.tlSeatIndex = null;
+    info.tlSpectating = null;
+    ws.send(JSON.stringify({type:'tlQueued', stake, position: game.queue.length}));
+    broadcastTlTable(stake);
+    return;
+  }
+
+  if(data.type==='leaveTlTable'){
+    if(info.tlStake===null || info.tlStake===undefined) return;
+    const stake = info.tlStake;
+    const game = tlGames[stake];
+    if(info.tlSeatIndex===null || info.tlSeatIndex===undefined){
+      game.queue = game.queue.filter(q=>q.userId!==info.userId);
+      info.tlStake = null;
+      ws.send(JSON.stringify({type:'tlLeft'}));
+      broadcastTlTable(stake);
+      return;
+    }
+    if(game.started && !game.gameOver){
+      ws.send(JSON.stringify({type:'error', message:'Không thể rời bàn giữa ván — đợi ván kết thúc.'}));
+      return;
+    }
+    if(game.seats[info.tlSeatIndex]) game.seats[info.tlSeatIndex] = null;
+    info.tlStake = null; info.tlSeatIndex = null;
+    ws.send(JSON.stringify({type:'tlLeft'}));
+    broadcastTlTable(stake);
+    broadcastLobby();
+    return;
+  }
+
+  if(data.type==='addTlBot'){
+    if(info.tlStake===null || info.tlStake===undefined) return;
+    const stake = info.tlStake;
+    const game = tlGames[stake];
+    if(game.started && !game.gameOver) return;
+    const seatIdx = game.seats.findIndex(s=>!s);
+    if(seatIdx===-1) return;
+    const existingNames = game.seats.filter(s=>s).map(s=>s.name);
+    game.seats[seatIdx] = { name: pickBotName(existingNames), isBot:true, hand:[], finished:false, hasPlayedAnyCard:false, connected:true };
+    broadcastTlTable(stake);
+    return;
+  }
+
+  if(data.type==='startTlHand'){
+    if(info.tlStake===null || info.tlStake===undefined) return;
+    const stake = info.tlStake;
+    const game = tlGames[stake];
+    if(game.started && !game.gameOver) return;
+    const res = tlEng.startHand(game);
+    if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
+    broadcastTlTable(stake);
+    maybeRunTlBot(stake);
+    return;
+  }
+
+  if(data.type==='tlPlay'){
+    if(info.tlStake===null || info.tlSeatIndex===null || info.tlSeatIndex===undefined) return;
+    const stake = info.tlStake;
+    const game = tlGames[stake];
+    const res = tlEng.playCombo(game, info.tlSeatIndex, data.cardKeys||[]);
+    if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
+    broadcastTlTable(stake);
+    if(game.gameOver) await settleTlHand(stake);
+    else maybeRunTlBot(stake);
+    return;
+  }
+
+  if(data.type==='tlPass'){
+    if(info.tlStake===null || info.tlSeatIndex===null || info.tlSeatIndex===undefined) return;
+    const stake = info.tlStake;
+    const game = tlGames[stake];
+    const res = tlEng.passTurn(game, info.tlSeatIndex);
+    if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
+    broadcastTlTable(stake);
+    maybeRunTlBot(stake);
+    return;
+  }
+
+  if(data.type==='tlSetSpectator'){
+    if(!info.isAdmin) return;
+    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    info.tlSpectating = (data.enabled && stake) ? stake : null;
+    if(stake) broadcastTlTable(stake);
+    return;
+  }
+
   if(data.type==='reaction'){
     if(info.tableStake===null || info.tableStake===undefined || info.seatIndex===null) return;
     const ALLOWED_EMOJI = ['👍','😂','😮','🔥','😢','🤔','👏','😎'];
@@ -306,38 +626,57 @@ async function handleMessage(ws, info, raw){
   }
 
   if(data.type==='getSlotsStatus'){
-    const jackpot = await db.getJackpot();
-    const spinsRemaining = await db.getSpinsRemaining(info.userId);
-    ws.send(JSON.stringify({type:'slotsStatus', jackpot, spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+    try{
+      const jackpot = await db.getJackpot();
+      const spinsRemaining = await db.getSpinsRemaining(info.userId);
+      if(jackpot===null){
+        ws.send(JSON.stringify({type:'error', message:'Không đọc được hũ jackpot từ database — kiểm tra lại đã chạy file supabase-migration-slots.sql chưa.'}));
+        return;
+      }
+      ws.send(JSON.stringify({type:'slotsStatus', jackpot, spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+    } catch(e){
+      console.error('[getSlotsStatus] error:', e);
+      ws.send(JSON.stringify({type:'error', message:'Lỗi khi tải thông tin Slots.'}));
+    }
     return;
   }
 
   if(data.type==='spinSlots'){
-    const consume = await db.checkAndConsumeSpin(info.userId);
-    if(!consume.ok){
-      ws.send(JSON.stringify({type:'error', message: consume.reason}));
-      ws.send(JSON.stringify({type:'slotsStatus', jackpot: await db.getJackpot(), spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
-      return;
+    try{
+      const consume = await db.checkAndConsumeSpin(info.userId);
+      if(!consume.ok){
+        ws.send(JSON.stringify({type:'error', message: consume.reason}));
+        const jp = await db.getJackpot();
+        ws.send(JSON.stringify({type:'slotsStatus', jackpot: jp, spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+        return;
+      }
+      const result = performSpin();
+      const seedAdd = 15 + Math.floor(Math.random()*26); // +15..40 chips into the pool per spin
+      let jackpotNow = await db.addToJackpot(seedAdd);
+      if(jackpotNow===null){
+        ws.send(JSON.stringify({type:'error', message:'Không cập nhật được hũ jackpot — kiểm tra lại đã chạy file supabase-migration-slots.sql trên database chưa.'}));
+        return;
+      }
+      let wonAmount = 0;
+      if(result.jackpotHit){
+        wonAmount = jackpotNow;
+        const user = await db.getUserById(info.userId);
+        if(user){ await db.updateChips(info.userId, user.chips + wonAmount); }
+        await db.resetJackpot(JACKPOT_RESET_BASE);
+        jackpotNow = JACKPOT_RESET_BASE;
+      }
+      const freshUser = await db.getUserById(info.userId);
+      ws.send(JSON.stringify({
+        type:'spinResult', symbols: result.symbols, jackpotHit: result.jackpotHit, wonAmount,
+        jackpot: jackpotNow, spinsRemaining: consume.spinsRemaining,
+        chips: freshUser ? freshUser.chips : null
+      }));
+      broadcastJackpot(jackpotNow);
+      broadcastLeaderboard();
+    } catch(e){
+      console.error('[spinSlots] error:', e);
+      ws.send(JSON.stringify({type:'error', message:'Lỗi hệ thống khi quay Slots, thử lại sau.'}));
     }
-    const result = performSpin();
-    const seedAdd = 15 + Math.floor(Math.random()*26); // +15..40 chips into the pool per spin
-    let jackpotNow = await db.addToJackpot(seedAdd);
-    let wonAmount = 0;
-    if(result.jackpotHit && jackpotNow!==null){
-      wonAmount = jackpotNow;
-      const user = await db.getUserById(info.userId);
-      if(user){ await db.updateChips(info.userId, user.chips + wonAmount); }
-      await db.resetJackpot(JACKPOT_RESET_BASE);
-      jackpotNow = JACKPOT_RESET_BASE;
-    }
-    const freshUser = await db.getUserById(info.userId);
-    ws.send(JSON.stringify({
-      type:'spinResult', symbols: result.symbols, jackpotHit: result.jackpotHit, wonAmount,
-      jackpot: jackpotNow, spinsRemaining: consume.spinsRemaining,
-      chips: freshUser ? freshUser.chips : null
-    }));
-    broadcastJackpot(jackpotNow);
-    broadcastLeaderboard();
     return;
   }
 
@@ -358,6 +697,47 @@ async function handleMessage(ws, info, raw){
     const newBalance = await db.adjustChips(targetUser.id, delta);
     if(newBalance===null){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật chip, thử lại sau.'})); return; }
     ws.send(JSON.stringify({type:'adminAdjustResult', ok:true, username:targetUser.username, newBalance, delta}));
+    broadcastLeaderboard();
+    return;
+  }
+
+  if(data.type==='adminKickPlayer'){
+    if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
+    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    const seatIdx = Number(data.seatIndex);
+    if(!stake || isNaN(seatIdx)){ ws.send(JSON.stringify({type:'error', message:'Thông tin không hợp lệ.'})); return; }
+    const res = await kickSeat(stake, seatIdx, 'Bạn đã bị admin mời ra khỏi bàn.');
+    if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
+    ws.send(JSON.stringify({type:'adminActionResult', ok:true, message:`Đã kick ${res.name} khỏi bàn.`}));
+    return;
+  }
+
+  if(data.type==='adminDeleteAccount'){
+    if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
+    const targetUsername = (data.username||'').trim();
+    if(!targetUsername){ ws.send(JSON.stringify({type:'error', message:'Thiếu tên tài khoản.'})); return; }
+    const targetUser = await db.getUserByUsername(targetUsername);
+    if(!targetUser){ ws.send(JSON.stringify({type:'error', message:'Không tìm thấy người chơi.'})); return; }
+    if(targetUser.is_admin){ ws.send(JSON.stringify({type:'error', message:'Không thể xoá tài khoản admin.'})); return; }
+
+    // If they're currently seated anywhere, kick them out first so no chips are lost/stranded.
+    for(const stake of TABLE_STAKES){
+      const game = games[stake];
+      const seatIdx = game.seats.findIndex(s=> s && !s.isBot && s.userId===targetUser.id);
+      if(seatIdx!==-1) await kickSeat(stake, seatIdx, 'Tài khoản của bạn đã bị admin xoá.');
+    }
+
+    const ok = await db.deleteUser(targetUser.id);
+    if(!ok){ ws.send(JSON.stringify({type:'error', message:'Lỗi xoá tài khoản, thử lại sau.'})); return; }
+
+    // Force-disconnect any live session logged in as the deleted account.
+    for(const [cws, cinfo] of clients){
+      if(cinfo.userId===targetUser.id){
+        try{ cws.send(JSON.stringify({type:'accountDeleted', message:'Tài khoản của bạn đã bị admin xoá.'})); }catch(e){}
+        try{ cws.close(); }catch(e){}
+      }
+    }
+    ws.send(JSON.stringify({type:'adminActionResult', ok:true, message:`Đã xoá tài khoản ${targetUser.username}.`}));
     broadcastLeaderboard();
     return;
   }
@@ -429,9 +809,10 @@ server.on('upgrade', (req, socket, head)=>{
 
 wss.on('connection', (ws)=>{
   const id = nextClientId++;
-  const info = { id, userId:null, username:null, isAdmin:false, tableStake:null, seatIndex:null, spectating:null };
+  const info = { id, userId:null, username:null, isAdmin:false, tableStake:null, seatIndex:null, spectating:null,
+    tlStake:null, tlSeatIndex:null, tlSpectating:null };
   clients.set(ws, info);
-  ws.send(JSON.stringify({type:'lobby', tables: lobbySnapshot()}));
+  ws.send(JSON.stringify({type:'lobby', tables: lobbySnapshot(), tlTables: tlLobbySnapshot()}));
   db.getJackpot().then(amount=>{
     if(amount!==null && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:'jackpotUpdate', amount}));
   }).catch(()=>{});
@@ -445,6 +826,27 @@ wss.on('connection', (ws)=>{
 
   ws.on('close', async ()=>{
     clients.delete(ws);
+
+    if(info.tlStake!==null && info.tlStake!==undefined){
+      const tlStake = info.tlStake;
+      const tlGame = tlGames[tlStake];
+      if(info.tlSeatIndex===null || info.tlSeatIndex===undefined){
+        tlGame.queue = tlGame.queue.filter(q=>q.userId!==info.userId);
+        broadcastTlTable(tlStake);
+      } else {
+        const tlP = tlGame.seats[info.tlSeatIndex];
+        if(tlP && tlP.ownerConnId===info.id){
+          if(tlGame.started && !tlGame.gameOver){
+            tlP.connected = false;
+          } else {
+            tlGame.seats[info.tlSeatIndex] = null;
+          }
+          broadcastTlTable(tlStake);
+          broadcastLobby();
+        }
+      }
+    }
+
     if(info.tableStake===null || info.tableStake===undefined || info.seatIndex===null) return;
     const stake = info.tableStake;
     const game = games[stake];

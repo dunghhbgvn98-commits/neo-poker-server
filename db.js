@@ -147,10 +147,15 @@ function createDb(supabase){
     return ok ? next : null;
   }
 
+  async function deleteUser(userId){
+    const { error } = await supabase.from('users').delete().eq('id', userId);
+    return !error;
+  }
+
   return {
     registerUser, loginUser, updateChips, getUserById, ensureAdmin, validUsername,
     getJackpot, addToJackpot, resetJackpot, checkAndConsumeSpin, getSpinsRemaining, DAILY_SPIN_LIMIT,
-    getAllNonAdminUsers, getUserByUsername, adjustChips
+    getAllNonAdminUsers, getUserByUsername, adjustChips, deleteUser
   };
 }
 
