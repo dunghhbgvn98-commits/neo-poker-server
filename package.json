@@ -1,13 +1,13 @@
 {
   "name": "neo-poker-server",
-  "version": "1.0.0",
-  "description": "Neo Poker multiplayer server (Node.js + WebSocket)",
+  "version": "2.0.0",
+  "description": "Neo Poker multiplayer server with accounts and multi-table",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "scripts": { "start": "node server.js" },
   "engines": { "node": ">=18" },
   "dependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "bcryptjs": "^2.4.3"
   }
 }
