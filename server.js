@@ -287,6 +287,20 @@ async function handleMessage(ws, info, raw){
     if(stake) broadcastTable(stake);
     return;
   }
+
+  if(data.type==='reaction'){
+    if(info.tableStake===null || info.tableStake===undefined || info.seatIndex===null) return;
+    const ALLOWED_EMOJI = ['👍','😂','😮','🔥','😢','🤔','👏','😎'];
+    if(!ALLOWED_EMOJI.includes(data.emoji)) return;
+    const stake = info.tableStake;
+    for(const [cws, cinfo] of clients){
+      if(cws.readyState !== WebSocket.OPEN) continue;
+      const watching = cinfo.tableStake===stake || cinfo.spectating===stake;
+      if(!watching) continue;
+      try{ cws.send(JSON.stringify({type:'reaction', seatIndex:info.seatIndex, emoji:data.emoji})); } catch(e){}
+    }
+    return;
+  }
 }
 
 function applyAuth(info, user){
