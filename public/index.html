@@ -164,6 +164,12 @@
     padding:3px 6px; cursor:pointer; flex-shrink:0;
   }
   .lb-edit-btn:hover{background:rgba(255,213,74,.25); color:var(--gold);}
+  .lb-del-btn:hover{background:rgba(224,80,110,.3); color:#ff8fa3;}
+  .seat-kick-btn{
+    background:rgba(224,80,110,.85); border:none; border-radius:8px; color:#fff; font-size:9px; font-weight:800;
+    padding:2px 6px; cursor:pointer; margin-top:2px; font-family:'Nunito';
+  }
+  .seat-kick-btn:hover{background:#e0506e;}
   .lb-empty{font-family:'Nunito'; font-size:11.5px; color:var(--text-dim); text-align:center; padding:10px 0;}
 
   .modal-overlay{
@@ -237,6 +243,55 @@
   .spin-result.big-win{color:var(--gold); font-size:19px; text-shadow:0 0 14px rgba(255,213,74,.8);}
   #spinBtn:disabled{opacity:.5; cursor:not-allowed;}
   .slots-note{font-family:'Nunito'; font-size:11px; color:var(--text-dim); margin-top:14px; line-height:1.6;}
+
+  /* ================= Tiến Lên ================= */
+  .tl-queue-banner{
+    text-align:center; font-family:'Baloo 2',cursive; font-weight:700; font-size:13px;
+    background:linear-gradient(180deg, rgba(56,189,248,.22), rgba(8,32,26,.3)); color:#7dd3fc;
+    padding:9px 14px; border-radius:12px; margin-bottom:12px; border:1px solid rgba(56,189,248,.4);
+  }
+  .tl-felt{
+    position:relative; min-height:280px;
+    background:radial-gradient(ellipse at 50% 40%, var(--green-felt-light), var(--green-felt) 60%, #072318 100%);
+    border-radius:26px; padding:20px 16px;
+    box-shadow:inset 0 0 60px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,213,74,.25);
+  }
+  .tl-players-grid{display:flex; justify-content:space-around; flex-wrap:wrap; gap:10px; margin-bottom:18px;}
+  .tl-player{
+    display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 10px; border-radius:14px;
+    min-width:88px; transition:box-shadow .3s, background .3s;
+  }
+  .tl-player.active-turn{box-shadow:0 0 0 2px var(--gold), 0 0 16px rgba(255,213,74,.6); background:rgba(255,213,74,.08); animation:turnPulse 1.1s ease-in-out infinite;}
+  .tl-player.finished{opacity:.5;}
+  .tl-player.disconnected{opacity:.5;}
+  .tl-player .tl-name{font-family:'Baloo 2',cursive; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; align-items:center; gap:4px; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tl-player.me .tl-name{color:var(--gold);}
+  .tl-player .tl-cardback-row{display:flex; gap:-8px;}
+  .tl-cardback{width:22px; height:30px; border-radius:4px; margin-left:-10px; background:repeating-linear-gradient(135deg, #6b3fd6 0, #6b3fd6 3px, #8b5cf6 3px, #8b5cf6 6px); box-shadow:0 2px 4px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.2);}
+  .tl-cardback:first-child{margin-left:0;}
+  .tl-cardcount{font-family:'Nunito'; font-weight:800; font-size:11px; color:var(--gold);}
+
+  .tl-trick-area{display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .tl-trick-cards{display:flex; gap:6px; min-height:64px; flex-wrap:wrap; justify-content:center;}
+
+  .tl-timer-wrap{height:8px; border-radius:6px; background:rgba(0,0,0,.35); overflow:hidden; margin:10px 0; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);}
+  .tl-timer-bar{height:100%; width:100%; background:linear-gradient(90deg, #34d399, var(--gold)); transition:width .3s linear, background .3s;}
+  .tl-timer-bar.urgent{background:linear-gradient(90deg, #e0506e, #ff8fa3);}
+
+  .tl-my-hand-wrap{margin-top:14px; overflow-x:auto; padding-bottom:6px;}
+  .tl-my-hand{display:flex; gap:6px; justify-content:center; min-width:min-content; padding:0 4px;}
+  .tl-hand-card{
+    width:48px; height:68px; background:#fdfaf3; border-radius:8px; box-shadow:0 6px 14px -4px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; justify-content:space-between; padding:4px 5px; cursor:pointer;
+    font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:13px; line-height:1; flex-shrink:0;
+    transition:transform .15s cubic-bezier(.3,1.5,.5,1), box-shadow .15s; user-select:none;
+  }
+  .tl-hand-card:hover{transform:translateY(-4px);}
+  .tl-hand-card.selected{transform:translateY(-14px); box-shadow:0 0 0 3px var(--gold), 0 10px 20px -6px rgba(0,0,0,.7);}
+  .tl-hand-card.red{color:var(--red-suit);} .tl-hand-card.black{color:var(--black-suit);}
+  .tl-hand-card .suit-big{align-self:center; font-size:19px;}
+  .tl-hand-card .corner{display:flex; flex-direction:column; align-items:flex-start; gap:1px;}
+  .tl-hand-card .corner.bottom{align-self:flex-end; transform:rotate(180deg);}
   .table-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:18px;}
 
   .table-card{
@@ -496,6 +551,7 @@
       <aside class="sidebar">
         <div class="sidebar-title">GAME MENU</div>
         <div class="menu-item active" data-menu="poker">🃏 Texas Poker</div>
+        <div class="menu-item" data-menu="tienlen">🂡 Tiến Lên</div>
         <div class="menu-item" data-menu="slots">🎰 Slots</div>
         <div class="menu-item ghost">🎡 Roulette (sắp có)</div>
       </aside>
@@ -527,6 +583,69 @@
         <button class="modal-cancel" id="modalCancelBtn">Huỷ</button>
         <button class="modal-confirm" id="modalConfirmBtn">Xác nhận</button>
       </div>
+    </div>
+  </div>
+
+  <!-- TIẾN LÊN LOBBY -->
+  <div id="tlLobbyScreen" class="hidden">
+    <div class="topbar">
+      <div class="player-chip">
+        <div class="avatar" id="tlLobbyAvatarInitial">?</div>
+        <div>
+          <div style="font-family:'Baloo 2',cursive; font-weight:700; font-size:14px;" id="tlLobbyUsername"></div>
+          <div class="balance-pill">🪙 <span id="tlLobbyChips">0</span></div>
+        </div>
+      </div>
+      <div class="brand-title"><span class="vip-badge">VIP</span> TIẾN LÊN</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="tlLobbyBackBtn" title="Về sảnh chính">←</button>
+      </div>
+    </div>
+    <div class="table-cards" id="tlTableCards"></div>
+  </div>
+
+  <!-- TIẾN LÊN GAME SCREEN -->
+  <div id="tlGameScreen" class="hidden">
+    <div class="admin-banner hidden" id="tlAdminSpectatorBanner">🔎 Đang giám sát — bạn thấy toàn bộ bài của mọi người</div>
+    <div class="tl-queue-banner hidden" id="tlQueueBanner"></div>
+    <div class="setup-bar">
+      <div class="setup-item"><button id="tlAddBotBtn">+ Thêm Bot</button></div>
+      <div class="setup-item"><button id="tlLeaveBtn">← Rời bàn</button></div>
+    </div>
+
+    <div class="table-frame">
+      <div class="tl-felt">
+        <div class="tl-players-grid" id="tlPlayersGrid"></div>
+        <div class="tl-trick-area">
+          <div class="street-tag" id="tlStatusTag">Chưa bắt đầu</div>
+          <div class="tl-trick-cards" id="tlTrickCards"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-timer-wrap hidden" id="tlTimerWrap">
+      <div class="tl-timer-bar" id="tlTimerBar"></div>
+    </div>
+
+    <div class="tl-my-hand-wrap">
+      <div class="tl-my-hand" id="tlMyHand"></div>
+    </div>
+
+    <div class="action-bar" id="tlActionBar" style="display:none;">
+      <button class="btn-fold" id="tlPassBtn">Bỏ lượt</button>
+      <button class="btn-call" id="tlPlayBtn">Đánh bài đã chọn</button>
+    </div>
+
+    <div class="primary-controls">
+      <button class="btn-quickstart" id="tlStartBtn">Bắt đầu ván</button>
+    </div>
+
+    <div class="result-banner" id="tlResultBanner">&nbsp;</div>
+    <div class="error-toast" id="tlErrorToast">&nbsp;</div>
+
+    <div class="log-panel">
+      <div class="log-title">Nhật ký ván đấu</div>
+      <div id="tlLogLines"></div>
     </div>
   </div>
 
@@ -721,6 +840,11 @@ let state=null;
 let prevState=null;
 let currentTableStake=null;
 let spectatingStake=null;
+let currentTlStake=null;
+let tlLobbyTables={};
+let tlState=null;
+let tlSelectedCards=new Set();
+let tlTimerInterval=null;
 let currentJackpot = 0;
 let spinsRemainingToday = 10;
 let spinInFlight = false;
@@ -747,7 +871,9 @@ function send(obj){ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.string
 function handleServerMessage(data){
   if(data.type==='lobby'){
     lobbyTables = data.tables;
+    tlLobbyTables = data.tlTables || {};
     if(!document.getElementById('lobbyScreen').classList.contains('hidden')) renderLobby();
+    if(!document.getElementById('tlLobbyScreen').classList.contains('hidden')) renderTlLobby();
   }
   else if(data.type==='authOk'){
     me = {username:data.username, chips:data.chips, isAdmin:data.isAdmin};
@@ -781,7 +907,37 @@ function handleServerMessage(data){
     document.getElementById('gameScreen').classList.add('hidden');
     document.getElementById('lobbyScreen').classList.remove('hidden');
   }
-  else if(data.type==='error'){ showError(data.message); sfxError(); }
+  else if(data.type==='kickedFromTable'){
+    currentTableStake = null;
+    document.getElementById('gameScreen').classList.add('hidden');
+    const lobbyEl = document.getElementById('lobbyScreen');
+    lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
+    showError(data.message);
+    renderLobby();
+  }
+  else if(data.type==='accountDeleted'){
+    alert(data.message);
+    location.reload();
+  }
+  else if(data.type==='adminActionResult'){
+    showError(data.message);
+  }
+  else if(data.type==='error'){
+    showError(data.message);
+    sfxError();
+    if(typeof spinInFlight!=='undefined' && spinInFlight){
+      clearInterval(window._slotsSpinInterval);
+      clearTimeout(window._slotsSpinSafetyTimeout);
+      spinInFlight = false;
+      for(let i=0;i<3;i++){
+        const reelEl = document.getElementById('reel'+i);
+        if(reelEl) reelEl.parentElement.classList.remove('spinning');
+      }
+      const resEl = document.getElementById('spinResultText');
+      if(resEl){ resEl.textContent = 'Lỗi: '+data.message; resEl.className = 'spin-result'; }
+      updateSpinButton();
+    }
+  }
   else if(data.type==='state'){
     const newState = data.state;
     if(currentTableStake===newState.stake || spectatingStake===newState.stake){
@@ -814,6 +970,29 @@ function handleServerMessage(data){
   else if(data.type==='leaderboard'){
     renderLeaderboard(data.entries);
   }
+  else if(data.type==='tlJoined'){
+    currentTlStake = data.stake;
+    document.getElementById('tlLobbyScreen').classList.add('hidden');
+    const gs = document.getElementById('tlGameScreen');
+    gs.classList.remove('hidden'); gs.classList.add('fade-screen');
+    tlSelectedCards.clear();
+  }
+  else if(data.type==='tlQueued'){
+    currentTlStake = data.stake;
+    document.getElementById('tlLobbyScreen').classList.add('hidden');
+    const gs = document.getElementById('tlGameScreen');
+    gs.classList.remove('hidden'); gs.classList.add('fade-screen');
+  }
+  else if(data.type==='tlLeft'){
+    currentTlStake = null;
+    document.getElementById('tlGameScreen').classList.add('hidden');
+    const lobbyEl = document.getElementById('tlLobbyScreen');
+    lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
+    renderTlLobby();
+  }
+  else if(data.type==='tlState'){
+    renderTlGame(data.state);
+  }
   else if(data.type==='adminAdjustResult'){
     document.getElementById('adminChipModal').classList.add('hidden');
     showError(`Đã cập nhật ${data.username}: số dư mới ${fmt(data.newBalance)} chip`);
@@ -831,18 +1010,37 @@ function renderLeaderboard(entries){
   container.innerHTML = entries.map((e,i)=>{
     const rankClass = medals[i] || '';
     const rankLabel = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-    const editBtn = me.isAdmin ? `<button class="lb-edit-btn" data-username="${e.username}">✏️</button>` : '';
+    const editBtn = me.isAdmin ? `<button class="lb-edit-btn" data-username="${e.username}" title="Chỉnh chip">✏️</button>` : '';
+    const delBtn = me.isAdmin ? `<button class="lb-edit-btn lb-del-btn" data-username="${e.username}" title="Xoá tài khoản">🗑️</button>` : '';
     return `<div class="lb-row">
       <div class="lb-rank ${rankClass}">${rankLabel}</div>
       <div class="lb-avatar">${e.username.charAt(0).toUpperCase()}</div>
       <div class="lb-name">${e.username}</div>
       <div class="lb-chips">${fmt(e.total)}</div>
       ${editBtn}
+      ${delBtn}
     </div>`;
   }).join('');
-  container.querySelectorAll('.lb-edit-btn').forEach(btn=>{
+  container.querySelectorAll('.lb-edit-btn:not(.lb-del-btn)').forEach(btn=>{
     btn.addEventListener('click', ()=> openAdminChipModal(btn.dataset.username));
   });
+  container.querySelectorAll('.lb-del-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> confirmDeleteAccount(btn.dataset.username));
+  });
+}
+
+let pendingDeleteUsername = null;
+function confirmDeleteAccount(username){
+  sfxClick();
+  if(pendingDeleteUsername === username){
+    // second click within the confirm window = actually delete
+    send({type:'adminDeleteAccount', username});
+    pendingDeleteUsername = null;
+    return;
+  }
+  pendingDeleteUsername = username;
+  showError(`Bấm 🗑️ lần nữa để XÁC NHẬN xoá tài khoản "${username}" (không thể hoàn tác)`);
+  setTimeout(()=>{ if(pendingDeleteUsername===username) pendingDeleteUsername = null; }, 4000);
 }
 
 function openAdminChipModal(username){
@@ -894,6 +1092,11 @@ document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
       document.getElementById('slotsAvatarInitial').textContent = me.username.charAt(0).toUpperCase();
       document.getElementById('slotsChips').textContent = fmt(me.chips);
       send({type:'getSlotsStatus'});
+    } else if(which==='tienlen'){
+      document.getElementById('lobbyScreen').classList.add('hidden');
+      const tls = document.getElementById('tlLobbyScreen');
+      tls.classList.remove('hidden'); tls.classList.add('fade-screen');
+      renderTlLobby();
     }
   });
 });
@@ -926,9 +1129,21 @@ document.getElementById('spinBtn').addEventListener('click', ()=>{
   }, 80);
   window._slotsSpinInterval = spinInterval;
   send({type:'spinSlots'});
+  clearTimeout(window._slotsSpinSafetyTimeout);
+  window._slotsSpinSafetyTimeout = setTimeout(()=>{
+    if(!spinInFlight) return;
+    clearInterval(window._slotsSpinInterval);
+    spinInFlight = false;
+    for(let i=0;i<3;i++) document.getElementById('reel'+i).parentElement.classList.remove('spinning');
+    document.getElementById('spinResultText').textContent = 'Không nhận được phản hồi từ server — thử lại nhé.';
+    document.getElementById('spinResultText').className = 'spin-result';
+    updateSpinButton();
+    send({type:'getSlotsStatus'});
+  }, 6000);
 });
 
 function finishSpinAnimation(data){
+  clearTimeout(window._slotsSpinSafetyTimeout);
   clearInterval(window._slotsSpinInterval);
   // stagger-stop each reel for a satisfying "clunk clunk clunk" feel
   const stops = [500, 850, 1200];
@@ -1070,6 +1285,221 @@ function renderLobby(){
       renderLobby();
     });
   });
+}
+
+/* ================= Tiến Lên ================= */
+const TL_RANK_LABEL={11:'J',12:'Q',13:'K',14:'A'};
+function tlRankLabel(r){ return TL_RANK_LABEL[r]||String(r); }
+function tlCardKey(c){ return c.r+c.s; }
+
+function renderTlLobby(){
+  document.getElementById('tlLobbyUsername').textContent = me.username;
+  document.getElementById('tlLobbyChips').textContent = fmt(me.chips);
+  document.getElementById('tlLobbyAvatarInitial').textContent = me.username.charAt(0).toUpperCase();
+
+  const container = document.getElementById('tlTableCards');
+  container.innerHTML='';
+  Object.keys(tlLobbyTables).sort((a,b)=>a-b).forEach((stakeStr, idx)=>{
+    const stake = Number(stakeStr);
+    const t = tlLobbyTables[stakeStr];
+    const theme = TIER_THEME[stake] || {key:'tier-5000', name:'Bàn '+fmt(stake), sub:''};
+    const card = document.createElement('div');
+    card.className = 'table-card ' + theme.key;
+    card.style.animationDelay = (idx*0.08)+'s';
+    card.innerHTML = `
+      <div class="scene"><div class="scene-sky"></div><div class="stars"></div>${sceneSVGFor(stake)}</div>
+      <div class="content">
+        <div class="tier-name">${theme.name}</div>
+        <div class="tier-sub">Tiến Lên · ${fmt(stake)} chip/lá</div>
+        <div class="stakes-pill">4 người<span class="unit">TỐI ĐA</span></div>
+        <div class="buyin-row"><span>${t.inHand?'<span class="live-dot"></span>Đang chơi':'Chỗ trống'}: ${t.seatsFilled}/4</span></div>
+        <button class="join-btn" data-stake="${stake}" style="margin-top:6px;">Vào bàn</button>
+      </div>`;
+    container.appendChild(card);
+  });
+  container.querySelectorAll('.join-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      sfxClick();
+      send({type:'joinTlTable', stake:Number(btn.dataset.stake)});
+    });
+  });
+}
+document.getElementById('tlLobbyBackBtn').addEventListener('click', ()=>{
+  sfxClick();
+  document.getElementById('tlLobbyScreen').classList.add('hidden');
+  const lobbyEl = document.getElementById('lobbyScreen');
+  lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
+  document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m.dataset.menu==='poker'));
+});
+
+document.getElementById('tlAddBotBtn').addEventListener('click', ()=>{ sfxClick(); send({type:'addTlBot'}); });
+document.getElementById('tlLeaveBtn').addEventListener('click', ()=>{
+  sfxClick();
+  send({type:'leaveTlTable'});
+});
+document.getElementById('tlStartBtn').addEventListener('click', ()=>{ sfxClick(); send({type:'startTlHand'}); });
+document.getElementById('tlPassBtn').addEventListener('click', ()=>{
+  sfxClick();
+  send({type:'tlPass'});
+  tlSelectedCards.clear();
+});
+document.getElementById('tlPlayBtn').addEventListener('click', ()=>{
+  if(tlSelectedCards.size===0){ showTlError('Chọn ít nhất 1 lá bài trước.'); return; }
+  sfxClick();
+  send({type:'tlPlay', cardKeys:[...tlSelectedCards]});
+  tlSelectedCards.clear();
+});
+
+function showTlError(msg){
+  const el = document.getElementById('tlErrorToast');
+  if(!el) return;
+  el.textContent = msg;
+  clearTimeout(showTlError._t);
+  showTlError._t = setTimeout(()=>{ el.textContent='\u00A0'; }, 3500);
+}
+
+function tlCardFaceHTML(card){
+  const color = (card.s==='H'||card.s==='D') ? 'red' : 'black';
+  return `<div class="corner"><span>${tlRankLabel(card.r)}</span><span>${SUIT_SYMBOL[card.s]}</span></div><div class="suit-big">${SUIT_SYMBOL[card.s]}</div><div class="corner bottom"><span>${tlRankLabel(card.r)}</span><span>${SUIT_SYMBOL[card.s]}</span></div>`;
+}
+
+function renderTlGame(state){
+  const prevState = tlState;
+  tlState = state;
+
+  document.getElementById('tlAdminSpectatorBanner').classList.toggle('hidden', !state.isAdminSpectator);
+
+  const isQueued = state.mySeatIndex===null && state.myQueuePosition;
+  const queueBanner = document.getElementById('tlQueueBanner');
+  if(isQueued){
+    queueBanner.classList.remove('hidden');
+    queueBanner.textContent = `⏳ Bạn đang xếp hàng chờ (vị trí ${state.myQueuePosition}/${state.queueLength}) — sẽ tự vào bàn ở ván tiếp theo.`;
+  } else {
+    queueBanner.classList.add('hidden');
+  }
+  document.getElementById('tlAddBotBtn').style.display = (state.mySeatIndex!==null) ? '' : 'none';
+
+  // players grid, rotated so "me" (if seated) is first/bottom-left for a natural view
+  const grid = document.getElementById('tlPlayersGrid');
+  grid.innerHTML='';
+  const order = [];
+  const base = state.mySeatIndex!==null ? state.mySeatIndex : 0;
+  for(let i=0;i<4;i++) order.push((base+i)%4);
+  order.forEach(i=>{
+    const p = state.seats[i];
+    const el = document.createElement('div');
+    if(!p){ el.className='tl-player'; el.innerHTML='<div class="tl-name">Ghế trống</div>'; grid.appendChild(el); return; }
+    const isMe = i===state.mySeatIndex;
+    el.className = 'tl-player' + (isMe?' me':'') + (p.finished?' finished':'') + (!p.connected?' disconnected':'') + (state.actingIndex===i && state.started && !state.gameOver ? ' active-turn':'');
+    const backs = Array.from({length: Math.min(p.cardCount,13)}).map(()=>`<div class="tl-cardback"></div>`).join('');
+    el.innerHTML = `
+      <div class="tl-name">${p.isBot?'🤖 ':''}${p.name}${!p.connected?' (mất kết nối)':''}${p.finished?' 🏁':''}</div>
+      <div class="tl-cardback-row">${backs}</div>
+      <div class="tl-cardcount">${p.cardCount} lá</div>
+    `;
+    grid.appendChild(el);
+  });
+
+  // trick area: current top combo played
+  const trickEl = document.getElementById('tlTrickCards');
+  trickEl.innerHTML='';
+  if(state.trickTop && state.lastPlays && state.lastPlays[state.trickTopSeat]){
+    state.lastPlays[state.trickTopSeat].forEach(c=>{
+      const color = (c.s==='H'||c.s==='D') ? 'red' : 'black';
+      const d = document.createElement('div');
+      d.className = 'card '+color;
+      d.style.width='42px'; d.style.height='58px';
+      d.innerHTML = tlCardFaceHTML(c);
+      trickEl.appendChild(d);
+    });
+  }
+
+  document.getElementById('tlStatusTag').textContent = state.gameOver ? 'Ngã bài' : (state.started ? (state.trickTop ? 'Đang chờ bạn chặt bài' : 'Bắt đầu lượt mới') : (isQueued ? 'Đang xếp hàng chờ' : 'Chưa bắt đầu'));
+
+  // my hand
+  const handWrap = document.getElementById('tlMyHand');
+  handWrap.innerHTML='';
+  const mySeat = state.mySeatIndex!==null ? state.seats[state.mySeatIndex] : null;
+  if(mySeat && mySeat.hand){
+    mySeat.hand.forEach(c=>{
+      const color = (c.s==='H'||c.s==='D') ? 'red' : 'black';
+      const key = tlCardKey(c);
+      const d = document.createElement('div');
+      d.className = 'tl-hand-card '+color+(tlSelectedCards.has(key)?' selected':'');
+      d.dataset.key = key;
+      d.innerHTML = tlCardFaceHTML(c);
+      d.addEventListener('click', ()=>{
+        if(tlSelectedCards.has(key)) tlSelectedCards.delete(key);
+        else tlSelectedCards.add(key);
+        sfxClick();
+        renderTlGame(tlState);
+      });
+      handWrap.appendChild(d);
+    });
+  }
+
+  // action bar
+  const isMyTurn = state.started && !state.gameOver && state.actingIndex===state.mySeatIndex && mySeat && !mySeat.finished;
+  document.getElementById('tlActionBar').style.display = isMyTurn ? 'flex' : 'none';
+  document.getElementById('tlPassBtn').disabled = isMyTurn && (!state.trickTop);
+  document.getElementById('tlStartBtn').style.display = (!state.started && state.mySeatIndex!==null) ? 'block' : 'none';
+
+  // turn timer bar
+  const timerWrap = document.getElementById('tlTimerWrap');
+  clearInterval(tlTimerInterval);
+  if(state.started && !state.gameOver && state.turnDeadline){
+    timerWrap.classList.remove('hidden');
+    const bar = document.getElementById('tlTimerBar');
+    const updateBar = ()=>{
+      const remaining = Math.max(0, state.turnDeadline - Date.now());
+      const pct = Math.min(100, (remaining/15000)*100);
+      bar.style.width = pct+'%';
+      bar.classList.toggle('urgent', remaining<4000);
+    };
+    updateBar();
+    tlTimerInterval = setInterval(updateBar, 150);
+  } else {
+    timerWrap.classList.add('hidden');
+  }
+
+  // result banner
+  const banner = document.getElementById('tlResultBanner');
+  if(state.gameOver && state.settleResults){
+    const winnerName = state.seats[state.winnerSeat] ? state.seats[state.winnerSeat].name : '?';
+    const lines = state.settleResults.map(r=>`${r.name}: -${fmt(r.pay)}${r.holdsTwo?' (giữ lá 2)':''}${r.neverPlayed?' (cóng)':''}`).join(' · ');
+    banner.innerHTML = `🏆 <b>${winnerName}</b> thắng ván! ${lines}`;
+    banner.className = 'result-banner info';
+  } else {
+    banner.textContent = '\u00A0';
+    banner.className = 'result-banner';
+  }
+
+  // sound cues on notable transitions
+  if(prevState && !prevState.started && state.started) sfxDeal();
+  if(prevState && !prevState.gameOver && state.gameOver){
+    sfxWin();
+    if(state.winnerSeat===state.mySeatIndex) spawnConfettiAt(document.querySelector('.tl-felt'), 50, 40);
+  }
+  if(prevState && prevState.actingIndex!==state.mySeatIndex && state.actingIndex===state.mySeatIndex && state.started && !state.gameOver){
+    sfxTurn();
+  }
+
+  // log
+  const logEl = document.getElementById('tlLogLines');
+  logEl.innerHTML='';
+  (state.log||[]).forEach(entry=>{
+    const d = document.createElement('div');
+    let text;
+    if(entry.action==='play') text = `${entry.name} đánh: ${entry.cards.map(c=>tlRankLabel(c.r)+SUIT_SYMBOL[c.s]).join(' ')}`;
+    else if(entry.action==='pass') text = `${entry.name} bỏ lượt`;
+    else if(entry.action==='win') text = `🏆 ${entry.name} đã đánh hết bài — thắng ván!`;
+    else if(entry.action==='timeout') text = `⏱ ${entry.name} hết giờ — tự động xử lý`;
+    else text = JSON.stringify(entry);
+    d.className = 'log-line' + (entry.action==='win'?' win':'');
+    d.textContent = text;
+    logEl.appendChild(d);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
 document.getElementById('addBotBtn').addEventListener('click', ()=>{ sfxClick(); send({type:'addBot'}); });
@@ -1218,15 +1648,26 @@ function renderGame(newState){
     const eqHTML = (state.isAdminSpectator && state.allEquities && state.allEquities[i]!==undefined && !p.folded)
       ? `<div class="seat-equity">${state.allEquities[i].toFixed(1)}%</div>` : '';
     const chipBumpClass = (prevP && prevP.chips!==p.chips) ? ' bump' : '';
+    const kickBtnHTML = (me.isAdmin && i!==state.mySeatIndex)
+      ? `<button class="seat-kick-btn" data-seat="${i}">Kick</button>` : '';
     seatEl.innerHTML = `
       <div class="seat-label">${p.isBot?'🤖 ':''}${p.name}${posTag}${!p.connected?' (mất kết nối)':''}${p.eliminated?' (out)':''}</div>
       <div class="chip-count${chipBumpClass}">${fmt(p.chips)}</div>
       ${eqHTML}
       <div class="bet-chip">${p.betThisRound>0?fmt(p.betThisRound):'&nbsp;'}</div>
       <div class="cards-row">${cardsHTML}</div>
+      ${kickBtnHTML}
     `;
     slotDiv.appendChild(seatEl);
     seatsLayer.appendChild(slotDiv);
+    const kickBtn = seatEl.querySelector('.seat-kick-btn');
+    if(kickBtn){
+      kickBtn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        sfxClick();
+        send({type:'adminKickPlayer', stake: state.stake, seatIndex: i});
+      });
+    }
 
     if(prevP && p.betThisRound > prevP.betThisRound && !justStartedHand){
       spawnChipFly(slot, felt);
