@@ -799,21 +799,6 @@ async function handleMessage(ws, info, raw){
     return;
   }
 
-  if(data.type==='adminSetJackpot'){
-    if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
-    const amount = Number(data.amount);
-    if(!Number.isFinite(amount) || amount < 0){
-      ws.send(JSON.stringify({type:'error', message:'Số chip không hợp lệ.'}));
-      return;
-    }
-    const rounded = Math.round(amount);
-    const ok = await db.resetJackpot(rounded);
-    if(!ok){ ws.send(JSON.stringify({type:'error', message:'Lỗi cập nhật hũ jackpot. Chi tiết: ' + (db.getLastJackpotError() || 'không rõ nguyên nhân') })); return; }
-    ws.send(JSON.stringify({type:'adminActionResult', ok:true, message:`Đã đặt hũ jackpot thành ${rounded} chip.`}));
-    broadcastJackpot(rounded);
-    return;
-  }
-
   if(data.type==='adminKickPlayer'){
     if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
     const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
