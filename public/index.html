@@ -26,10 +26,29 @@
   .conn-status{font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-align:center; margin-bottom:10px;}
   .conn-status.ok{color:#7dc98f;} .conn-status.bad{color:#e08a9d;}
 
-  .join-box{background:var(--panel); border-radius:14px; padding:20px; box-shadow:inset 0 0 0 1px rgba(212,175,55,.15); max-width:400px; margin:0 auto;}
-  .join-box label{display:block; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--cream-dim); margin:12px 0 5px;}
-  .join-box input, .join-box select{width:100%; padding:10px; border-radius:8px; border:none; background:rgba(255,255,255,.08); color:var(--cream); font-family:'Inter'; font-size:14px;}
-  .join-box button{width:100%; margin-top:16px; padding:12px; border-radius:10px; border:none; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05; font-weight:600; font-size:14px; cursor:pointer;}
+  .panel-box{background:var(--panel); border-radius:14px; padding:22px; box-shadow:inset 0 0 0 1px rgba(212,175,55,.15); max-width:400px; margin:0 auto;}
+  .panel-box label{display:block; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--cream-dim); margin:12px 0 5px;}
+  .panel-box input, .panel-box select{width:100%; padding:10px; border-radius:8px; border:none; background:rgba(255,255,255,.08); color:var(--cream); font-family:'Inter'; font-size:14px;}
+  .panel-box button.primary{width:100%; margin-top:16px; padding:12px; border-radius:10px; border:none; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05; font-weight:600; font-size:14px; cursor:pointer;}
+  .panel-box .switch-mode{text-align:center; margin-top:14px; font-size:12.5px; color:var(--cream-dim);}
+  .panel-box .switch-mode a{color:var(--gold-soft); cursor:pointer; text-decoration:underline;}
+  .auth-error{text-align:center; color:#e08a9d; font-size:12.5px; margin-top:10px; min-height:16px; font-family:'IBM Plex Mono', monospace;}
+
+  .lobby-header{display:flex; justify-content:space-between; align-items:center; background:var(--panel); border-radius:12px; padding:12px 18px; margin-bottom:16px;}
+  .lobby-header .who{font-family:'IBM Plex Mono', monospace; font-size:13px;}
+  .lobby-header .who b{color:var(--gold-soft);}
+  .lobby-header .admin-tag{background:rgba(212,175,55,.2); color:var(--gold-soft); border-radius:6px; padding:2px 8px; font-size:10.5px; margin-left:8px;}
+  .lobby-header button{background:transparent; border:1px solid rgba(244,234,217,.3); color:var(--cream); border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer;}
+
+  .table-cards{display:flex; flex-direction:column; gap:12px;}
+  .table-card{background:var(--panel); border-radius:14px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; box-shadow:inset 0 0 0 1px rgba(212,175,55,.14);}
+  .table-card .stake-name{font-family:'Fraunces', serif; font-weight:600; font-size:19px; color:var(--gold-soft);}
+  .table-card .stake-sub{font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--cream-dim); margin-top:4px;}
+  .table-card .actions{display:flex; gap:8px; align-items:center;}
+  .table-card button.join-btn{background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05; border:none; border-radius:8px; padding:10px 16px; font-weight:600; font-size:13px; cursor:pointer;}
+  .table-card button.join-btn:disabled{opacity:.4; cursor:not-allowed;}
+  .table-card button.watch-btn{background:rgba(169,69,92,.18); color:#e08a9d; border:none; border-radius:8px; padding:10px 14px; font-weight:600; font-size:12.5px; cursor:pointer;}
+  .table-card button.watch-btn.active{background:var(--villain); color:var(--cream);}
 
   .setup-bar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
   .setup-item{flex:1; min-width:150px; background:var(--panel); border-radius:12px; padding:9px 14px; display:flex; align-items:center; justify-content:center; gap:8px;}
@@ -39,18 +58,19 @@
   .table-frame{background:linear-gradient(180deg, var(--rail-light), var(--rail)); border-radius:24px; padding:12px; box-shadow:0 20px 50px -18px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.05);}
   .table-felt{background:radial-gradient(ellipse at 50% 15%, var(--felt-light), var(--felt) 55%, var(--felt-dark) 100%); border-radius:16px; padding:20px 16px 18px; box-shadow:inset 0 0 60px rgba(0,0,0,.55), inset 0 0 0 2px rgba(212,175,55,.18);}
 
+  .admin-banner{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11px; background:rgba(169,69,92,.15); color:#e08a9d; padding:8px; border-radius:8px; margin-bottom:12px;}
+
   .seats-grid{display:flex; flex-wrap:wrap; justify-content:center; gap:12px 18px; margin-bottom:14px;}
   .seat{display:flex; flex-direction:column; align-items:center; gap:5px; padding:6px; border-radius:12px; transition:box-shadow .3s; min-width:80px;}
   .seat.active-turn{box-shadow:0 0 0 2px var(--gold-soft), 0 0 14px rgba(212,175,55,.5);}
   .seat.folded{opacity:.35; filter:grayscale(.6);}
-  .seat.empty{opacity:.4;}
   .seat.disconnected{opacity:.5;}
   .seat.me .seat-label{color:var(--gold-soft);}
   .seat-label{font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.1em; color:var(--cream-dim); display:flex; align-items:center; gap:4px; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .pos-tag{background:rgba(212,175,55,.2); color:var(--gold-soft); border-radius:4px; padding:0 4px; font-size:8.5px; flex-shrink:0;}
   .chip-count{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold-soft);}
+  .seat-equity{font-family:'IBM Plex Mono', monospace; font-size:10px; color:#e08a9d;}
   .bet-chip{font-family:'IBM Plex Mono', monospace; font-size:10px; background:rgba(212,175,55,.15); color:var(--gold-soft); border-radius:8px; padding:1px 7px; min-height:14px;}
-  .empty-seat-btn{background:rgba(255,255,255,.06); border:1px dashed rgba(244,234,217,.3); color:var(--cream-dim); border-radius:8px; padding:8px 10px; font-size:11px; cursor:pointer; font-family:'IBM Plex Mono', monospace;}
 
   .cards-row{display:flex; gap:5px;}
   .card{width:42px; height:58px; background:#fbf8f2; border-radius:6px; box-shadow:0 6px 14px -4px rgba(0,0,0,.55); display:flex; flex-direction:column; justify-content:space-between; padding:3px 4px; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:11px; line-height:1;}
@@ -85,9 +105,11 @@
   .btn-raise{background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05;}
   .primary-controls{display:flex; gap:10px; margin-top:12px;}
   .primary-controls button{flex:1; font-family:'Inter'; font-weight:600; font-size:14px; padding:13px 16px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05;}
+  .primary-controls button.secondary{background:transparent; color:var(--cream); box-shadow:inset 0 0 0 1.5px rgba(244,234,217,.3);}
   .result-banner{text-align:center; font-family:'Fraunces', serif; font-size:14px; margin-top:12px; padding:10px; border-radius:10px; min-height:18px; color:var(--cream-dim);}
   .result-banner.info{background:rgba(255,255,255,.06); color:var(--cream);}
   .error-toast{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:12px; color:#e08a9d; margin-top:8px; min-height:16px;}
+  .hidden{display:none !important;}
 </style>
 </head>
 <body>
@@ -95,27 +117,39 @@
   <header>
     <div class="eyebrow">Neo Poker Lab</div>
     <h1>Multiplayer thật</h1>
-    <div class="subtitle">Kết nối cùng bạn bè qua mạng — Texas Hold'em</div>
+    <div class="subtitle">Đăng nhập · Chọn bàn theo mức chip · Chơi cùng bạn bè</div>
   </header>
   <div class="conn-status" id="connStatus">Đang kết nối...</div>
 
-  <div id="joinScreen" class="join-box">
-    <label>Tên của bạn</label>
-    <input id="nameInput" maxlength="20" placeholder="Nhập tên hiển thị">
-    <label>Chip khởi điểm khi vào bàn</label>
-    <select id="chipSelect">
-      <option value="300">300</option>
-      <option value="500">500</option>
-      <option value="1000" selected>1,000</option>
-      <option value="2000">2,000</option>
-      <option value="5000">5,000</option>
-    </select>
-    <button id="joinBtn">Vào bàn</button>
+  <!-- AUTH SCREEN -->
+  <div id="authScreen" class="panel-box">
+    <div id="authTitle" style="text-align:center; font-family:'Fraunces',serif; font-size:17px; color:var(--gold-soft);">Đăng nhập</div>
+    <label>Tên đăng nhập</label>
+    <input id="authUsername" maxlength="20" placeholder="vd: dungpro">
+    <label>Mật khẩu</label>
+    <input id="authPassword" type="password" placeholder="Tối thiểu 4 ký tự">
+    <button class="primary" id="authSubmitBtn">Đăng nhập</button>
+    <div class="auth-error" id="authError">&nbsp;</div>
+    <div class="switch-mode">
+      <span id="switchModePrompt">Chưa có tài khoản?</span> <a id="switchModeLink">Đăng ký ngay</a>
+    </div>
   </div>
 
-  <div id="gameScreen" style="display:none;">
+  <!-- LOBBY SCREEN -->
+  <div id="lobbyScreen" class="hidden">
+    <div class="lobby-header">
+      <div class="who">Xin chào, <b id="lobbyUsername"></b><span class="admin-tag hidden" id="adminTag">ADMIN</span><br>Số dư: <b id="lobbyChips" style="color:var(--gold-soft)"></b> chip</div>
+      <button id="logoutBtn">Đăng xuất</button>
+    </div>
+    <div class="table-cards" id="tableCards"></div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="gameScreen" class="hidden">
+    <div class="admin-banner hidden" id="adminSpectatorBanner">🔎 Đang giám sát — bạn thấy toàn bộ bài và tỉ lệ thắng của mọi người</div>
     <div class="setup-bar">
       <div class="setup-item"><button id="addBotBtn">+ Thêm Bot vào ghế trống</button></div>
+      <div class="setup-item"><button id="leaveTableBtn">← Rời bàn</button></div>
     </div>
 
     <div class="table-frame">
@@ -161,44 +195,174 @@ const RANK_LABEL={11:'J',12:'Q',13:'K',14:'A'};
 const SUIT_SYMBOL={S:'♠',H:'♥',D:'♦',C:'♣'};
 const SUIT_COLOR={S:'black',C:'black',H:'red',D:'red'};
 function rankLabel(r){return RANK_LABEL[r]||String(r);}
-function fmt(n){return n.toLocaleString('en-US');}
+function fmt(n){return Math.round(n).toLocaleString('en-US');}
 
 let ws=null;
-let state=null;
+let authMode='login';
+let me={username:null, chips:0, isAdmin:false};
+let lobbyTables={};
+let state=null;       // current table game state (if seated or spectating)
+let currentTableStake=null;
+let spectatingStake=null;
 const STREET_LABELS=['Preflop','Flop','Turn','River','Ngã bài'];
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
 function connect(){
   const proto = location.protocol==='https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(proto+'//'+location.host);
-  ws.onopen = ()=>{ document.getElementById('connStatus').textContent='Đã kết nối'; document.getElementById('connStatus').className='conn-status ok'; };
+  ws.onopen = ()=>{
+    document.getElementById('connStatus').textContent='Đã kết nối';
+    document.getElementById('connStatus').className='conn-status ok';
+  };
   ws.onclose = ()=>{ document.getElementById('connStatus').textContent='Mất kết nối — đang thử lại...'; document.getElementById('connStatus').className='conn-status bad'; setTimeout(connect, 2000); };
   ws.onerror = ()=>{};
   ws.onmessage = (ev)=>{
     const data = JSON.parse(ev.data);
-    if(data.type==='state'){ state=data.state; render(); }
-    else if(data.type==='error'){ showError(data.message); }
+    handleServerMessage(data);
   };
 }
 connect();
-
 function send(obj){ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+
+function handleServerMessage(data){
+  if(data.type==='lobby'){
+    lobbyTables = data.tables;
+    if(!document.getElementById('lobbyScreen').classList.contains('hidden')) renderLobby();
+  }
+  else if(data.type==='authOk'){
+    me = {username:data.username, chips:data.chips, isAdmin:data.isAdmin};
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('lobbyScreen').classList.remove('hidden');
+    renderLobby();
+  }
+  else if(data.type==='authError'){
+    document.getElementById('authError').textContent = data.message;
+  }
+  else if(data.type==='joinedTable'){
+    currentTableStake = data.stake;
+    lsSet('neoPokerToken_'+data.stake, data.token);
+    document.getElementById('lobbyScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+  }
+  else if(data.type==='leftTable'){
+    if(data.chips!==null) me.chips = data.chips;
+    currentTableStake = null;
+    lsDel('neoPokerToken_'+state?.stake);
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('lobbyScreen').classList.remove('hidden');
+    renderLobby();
+  }
+  else if(data.type==='rejoinFailed'){
+    // token invalid/expired -> just go to lobby
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('lobbyScreen').classList.remove('hidden');
+  }
+  else if(data.type==='error'){ showError(data.message); }
+  else if(data.type==='state'){
+    state = data.state;
+    if(currentTableStake===state.stake || spectatingStake===state.stake) renderGame();
+  }
+}
+
 function showError(msg){
   const el = document.getElementById('errorToast');
+  if(!el) return;
   el.textContent = msg;
   clearTimeout(showError._t);
   showError._t = setTimeout(()=>{ el.textContent='\u00A0'; }, 3500);
 }
 
-document.getElementById('joinBtn').addEventListener('click', ()=>{
-  const name = document.getElementById('nameInput').value.trim() || 'Người chơi';
-  const chips = document.getElementById('chipSelect').value;
-  send({type:'join', name, startingChips:chips});
-  document.getElementById('joinScreen').style.display='none';
-  document.getElementById('gameScreen').style.display='block';
+/* ---------- Auth screen ---------- */
+document.getElementById('switchModeLink').addEventListener('click', ()=>{
+  authMode = authMode==='login' ? 'register' : 'login';
+  document.getElementById('authTitle').textContent = authMode==='login' ? 'Đăng nhập' : 'Đăng ký tài khoản mới';
+  document.getElementById('authSubmitBtn').textContent = authMode==='login' ? 'Đăng nhập' : 'Đăng ký (nhận 5,000 chip)';
+  document.getElementById('switchModePrompt').textContent = authMode==='login' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?';
+  document.getElementById('switchModeLink').textContent = authMode==='login' ? 'Đăng ký ngay' : 'Đăng nhập';
+  document.getElementById('authError').textContent = '\u00A0';
 });
-document.getElementById('addBotBtn').addEventListener('click', ()=>{
-  const chips = document.getElementById('chipSelect').value || 1000;
-  send({type:'addBot', startingChips:chips});
+document.getElementById('authSubmitBtn').addEventListener('click', ()=>{
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!username || !password){ document.getElementById('authError').textContent='Nhập đầy đủ tên đăng nhập và mật khẩu.'; return; }
+  send({type: authMode, username, password});
+});
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  location.reload();
+});
+
+/* ---------- Lobby screen ---------- */
+function renderLobby(){
+  document.getElementById('lobbyUsername').textContent = me.username;
+  document.getElementById('lobbyChips').textContent = fmt(me.chips);
+  document.getElementById('adminTag').classList.toggle('hidden', !me.isAdmin);
+
+  const container = document.getElementById('tableCards');
+  container.innerHTML='';
+  Object.keys(lobbyTables).sort((a,b)=>a-b).forEach(stakeStr=>{
+    const stake = Number(stakeStr);
+    const t = lobbyTables[stakeStr];
+    const card = document.createElement('div');
+    card.className='table-card';
+    const canJoin = me.chips >= stake && t.seatsFilled < t.maxSeats;
+    card.innerHTML = `
+      <div>
+        <div class="stake-name">Bàn ${fmt(stake)} chip</div>
+        <div class="stake-sub">${t.seatsFilled}/${t.maxSeats} chỗ ${t.inHand ? '· đang chơi' : ''}</div>
+      </div>
+      <div class="actions">
+        ${me.isAdmin ? `<button class="watch-btn ${spectatingStake===stake?'active':''}" data-stake="${stake}" data-action="watch">${spectatingStake===stake?'Đang giám sát':'Giám sát'}</button>` : ''}
+        <button class="join-btn" data-stake="${stake}" data-action="join" ${canJoin?'':'disabled'}>Vào bàn</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+  container.querySelectorAll('button[data-action="join"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const stake = Number(btn.dataset.stake);
+      const savedToken = lsGet('neoPokerToken_'+stake);
+      if(savedToken) send({type:'rejoinTable', stake, token:savedToken});
+      else send({type:'joinTable', stake});
+    });
+  });
+  container.querySelectorAll('button[data-action="watch"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const stake = Number(btn.dataset.stake);
+      if(spectatingStake===stake){
+        spectatingStake = null;
+        send({type:'setSpectator', stake, enabled:false});
+        document.getElementById('gameScreen').classList.add('hidden');
+        document.getElementById('lobbyScreen').classList.remove('hidden');
+      } else {
+        spectatingStake = stake;
+        send({type:'setSpectator', stake, enabled:true});
+        document.getElementById('lobbyScreen').classList.add('hidden');
+        document.getElementById('gameScreen').classList.remove('hidden');
+        document.getElementById('addBotBtn').style.display='none';
+        document.getElementById('leaveTableBtn').textContent='← Ngừng giám sát';
+      }
+      renderLobby();
+    });
+  });
+}
+
+/* ---------- Game screen ---------- */
+document.getElementById('addBotBtn').addEventListener('click', ()=> send({type:'addBot'}) );
+document.getElementById('leaveTableBtn').addEventListener('click', ()=>{
+  if(spectatingStake!==null){
+    send({type:'setSpectator', stake:spectatingStake, enabled:false});
+    spectatingStake=null;
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('lobbyScreen').classList.remove('hidden');
+    document.getElementById('addBotBtn').style.display='';
+    document.getElementById('leaveTableBtn').textContent='← Rời bàn';
+    renderLobby();
+  } else {
+    send({type:'leaveTable'});
+  }
 });
 document.getElementById('startBtn').addEventListener('click', ()=> send({type:'startHand'}) );
 document.getElementById('foldBtn').addEventListener('click', ()=> send({type:'action', action:'fold'}) );
@@ -212,8 +376,8 @@ document.getElementById('raisePotBtn').addEventListener('click', ()=>{
   send({type:'action', action:'raise', amount:desired});
 });
 document.getElementById('allInBtn').addEventListener('click', ()=>{
-  const me = state.seats[state.mySeatIndex];
-  send({type:'action', action:'raise', amount: (me ? me.betThisRound + me.chips : 999999)});
+  const me2 = state.seats[state.mySeatIndex];
+  send({type:'action', action:'raise', amount: (me2 ? me2.betThisRound + me2.chips : 999999)});
 });
 
 function cardHTML(card){
@@ -223,8 +387,10 @@ function cardHTML(card){
   return `<div class="card ${color}"><div class="corner"><span>${rankLabel(card.r)}</span><span>${SUIT_SYMBOL[card.s]}</span></div><div class="suit-big">${SUIT_SYMBOL[card.s]}</div><div class="corner bottom"><span>${rankLabel(card.r)}</span><span>${SUIT_SYMBOL[card.s]}</span></div></div>`;
 }
 
-function render(){
+function renderGame(){
   if(!state) return;
+  document.getElementById('adminSpectatorBanner').classList.toggle('hidden', !state.isAdminSpectator);
+
   const seatsGrid = document.getElementById('seatsGrid');
   seatsGrid.innerHTML='';
   state.seats.forEach((p,i)=>{
@@ -241,9 +407,12 @@ function render(){
     else if(i===state.sbIndex) posTag='<span class="pos-tag">SB</span>';
     else if(i===state.bbIndex) posTag='<span class="pos-tag">BB</span>';
     const cardsHTML = p.cards.map(cardHTML).join('');
+    const eqHTML = (state.isAdminSpectator && state.allEquities && state.allEquities[i]!==undefined && !p.folded)
+      ? `<div class="seat-equity">${state.allEquities[i].toFixed(1)}%</div>` : '';
     seat.innerHTML = `
       <div class="seat-label">${p.isBot?'🤖 ':''}${p.name}${posTag}${!p.connected?' (mất kết nối)':''}${p.eliminated?' (out)':''}</div>
       <div class="chip-count">${fmt(p.chips)}</div>
+      ${eqHTML}
       <div class="bet-chip">${p.betThisRound>0?fmt(p.betThisRound):'&nbsp;'}</div>
       <div class="cards-row">${cardsHTML}</div>
     `;
@@ -258,18 +427,19 @@ function render(){
   document.getElementById('potDisplay').textContent = 'Pot: ' + fmt(state.pot || 0);
 
   const eqEl = document.getElementById('myEquity');
-  if(state.myEquity!==null && state.myEquity!==undefined){
+  if(!state.isAdminSpectator && state.myEquity!==null && state.myEquity!==undefined){
     eqEl.innerHTML = `Tỉ lệ thắng ước tính của bạn: <b>${state.myEquity.toFixed(1)}%</b>`;
   } else { eqEl.innerHTML='&nbsp;'; }
 
-  const me = state.seats[state.mySeatIndex];
-  const isMyTurn = state.inHand && !state.handOver && state.actingIndex===state.mySeatIndex && me && !me.folded;
+  const isSpectatorView = state.mySeatIndex===null || state.mySeatIndex===undefined;
+  const meSeat = !isSpectatorView ? state.seats[state.mySeatIndex] : null;
+  const isMyTurn = !isSpectatorView && state.inHand && !state.handOver && state.actingIndex===state.mySeatIndex && meSeat && !meSeat.folded;
   document.getElementById('actionBar').style.display = isMyTurn ? 'flex' : 'none';
-  document.getElementById('startBtn').style.display = (!state.inHand) ? 'block' : 'none';
+  document.getElementById('startBtn').style.display = (!state.inHand && !isSpectatorView) ? 'block' : 'none';
   if(isMyTurn){
     const callAmt = state.myCallAmt || 0;
-    document.getElementById('callBtn').textContent = callAmt<=0 ? 'Check' : `Call ${fmt(Math.min(callAmt, me.chips))}`;
-    const canRaise = me.chips > Math.max(callAmt,0);
+    document.getElementById('callBtn').textContent = callAmt<=0 ? 'Check' : `Call ${fmt(Math.min(callAmt, meSeat.chips))}`;
+    const canRaise = meSeat.chips > Math.max(callAmt,0);
     document.getElementById('raiseHalfBtn').disabled=!canRaise;
     document.getElementById('raisePotBtn').disabled=!canRaise;
   }
