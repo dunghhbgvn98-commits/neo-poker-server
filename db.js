@@ -5,14 +5,23 @@ function createDb(supabase){
   function validUsername(u){
     return typeof u==='string' && u.length>=3 && u.length<=20 && /^[a-zA-Z0-9_]+$/.test(u);
   }
+  function validPhone(p){
+    if(typeof p!=='string') return false;
+    const digits = p.replace(/[\s\-\.]/g,'');
+    return /^\+?\d{8,15}$/.test(digits);
+  }
 
-  async function registerUser(username, password){
+  async function registerUser(username, password, phone){
     username = (username||'').trim();
     if(!validUsername(username)){
       return {ok:false, reason:'Tên đăng nhập phải từ 3-20 ký tự, chỉ gồm chữ/số/gạch dưới.'};
     }
     if(!password || password.length<4 || password.length>72){
       return {ok:false, reason:'Mật khẩu phải từ 4 ký tự trở lên.'};
+    }
+    const cleanPhone = (phone||'').trim();
+    if(!validPhone(cleanPhone)){
+      return {ok:false, reason:'Số điện thoại không hợp lệ (8-15 chữ số).'};
     }
     const { data: existing, error: findErr } = await supabase
       .from('users').select('id').ilike('username', username).maybeSingle();
@@ -21,7 +30,7 @@ function createDb(supabase){
 
     const hash = await bcrypt.hash(password, 10);
     const { data, error } = await supabase
-      .from('users').insert({username, password_hash:hash, chips:5000}).select().single();
+      .from('users').insert({username, password_hash:hash, chips:5000, phone:cleanPhone}).select().single();
     if(error) return {ok:false, reason:'Lỗi tạo tài khoản: '+error.message};
     return {ok:true, user:data};
   }
@@ -92,31 +101,15 @@ function createDb(supabase){
   }
 
   // Checks the user's daily spin count (resetting it if it's a new day),
-  // and if they still have spins left, consumes one and returns {ok:true, spinsRemaining}.
-  // If they're out of spins for today, returns {ok:false, reason, spinsRemaining:0}.
+  // Spins are unlimited — kept as a thin pass-through so callers don't need changing.
   async function checkAndConsumeSpin(userId){
     const user = await getUserById(userId);
     if(!user) return {ok:false, reason:'Không tìm thấy tài khoản.', spinsRemaining:0};
-    const today = todayStr();
-    let spinsToday = user.spins_today || 0;
-    if(user.last_spin_date !== today){
-      spinsToday = 0; // new day, counter resets
-    }
-    if(spinsToday >= DAILY_SPIN_LIMIT){
-      return {ok:false, reason:`Bạn đã dùng hết ${DAILY_SPIN_LIMIT} lượt quay hôm nay, quay lại vào ngày mai nhé!`, spinsRemaining:0};
-    }
-    spinsToday += 1;
-    const { error } = await supabase.from('users').update({spins_today:spinsToday, last_spin_date:today}).eq('id', userId);
-    if(error) return {ok:false, reason:'Lỗi cập nhật lượt quay: '+error.message, spinsRemaining: DAILY_SPIN_LIMIT-(user.spins_today||0)};
-    return {ok:true, spinsRemaining: DAILY_SPIN_LIMIT - spinsToday};
+    return {ok:true, spinsRemaining:null};
   }
 
   async function getSpinsRemaining(userId){
-    const user = await getUserById(userId);
-    if(!user) return 0;
-    const today = todayStr();
-    const spinsToday = (user.last_spin_date===today) ? (user.spins_today||0) : 0;
-    return Math.max(0, DAILY_SPIN_LIMIT - spinsToday);
+    return null; // unlimited
   }
 
   /* ================= Leaderboard / admin chip management ================= */

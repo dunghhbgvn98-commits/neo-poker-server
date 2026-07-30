@@ -429,7 +429,7 @@ async function handleMessage(ws, info, raw){
   try{ data = JSON.parse(raw); } catch(e){ return; }
 
   if(data.type==='register'){
-    const r = await db.registerUser(data.username, data.password);
+    const r = await db.registerUser(data.username, data.password, data.phone);
     if(!r.ok){ ws.send(JSON.stringify({type:'authError', message:r.reason})); return; }
     applyAuth(info, r.user);
     ws.send(JSON.stringify({type:'authOk', username:r.user.username, chips:r.user.chips, isAdmin:!!r.user.is_admin}));
@@ -716,7 +716,7 @@ async function handleMessage(ws, info, raw){
         ws.send(JSON.stringify({type:'error', message:'Không đọc được hũ jackpot từ database — kiểm tra lại đã chạy file supabase-migration-slots.sql chưa.'}));
         return;
       }
-      ws.send(JSON.stringify({type:'slotsStatus', jackpot, spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+      ws.send(JSON.stringify({type:'slotsStatus', jackpot, spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT, jackpotHistory}));
     } catch(e){
       console.error('[getSlotsStatus] error:', e);
       ws.send(JSON.stringify({type:'error', message:'Lỗi khi tải thông tin Slots.'}));
@@ -736,7 +736,7 @@ async function handleMessage(ws, info, raw){
       if(!consume.ok){
         ws.send(JSON.stringify({type:'error', message: consume.reason}));
         const jp = await db.getJackpot();
-        ws.send(JSON.stringify({type:'slotsStatus', jackpot: jp, spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT}));
+        ws.send(JSON.stringify({type:'slotsStatus', jackpot: jp, spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT, jackpotHistory}));
         return;
       }
 
@@ -761,6 +761,7 @@ async function handleMessage(ws, info, raw){
         jackpotNow = jackpotNow - wonAmount; // remainder stays in the pool, never resets to zero
         const newBal = await db.adjustChips(info.userId, wonAmount);
         if(newBal!==null) finalChips = newBal;
+        recordJackpotWin(info.username, result.tier, wonAmount);
       }
 
       ws.send(JSON.stringify({
@@ -905,6 +906,19 @@ function performSpin(){
   }
   return { symbols, tier:'none' };
 }
+// In-memory recent jackpot win history (resets on server restart — this is just a
+// "recent activity" ticker, not financial record; the actual chip credit is persisted in the DB).
+const jackpotHistory = [];
+const JACKPOT_HISTORY_MAX = 25;
+function recordJackpotWin(username, tier, amount){
+  jackpotHistory.unshift({ username, tier, amount, at: Date.now() });
+  if(jackpotHistory.length > JACKPOT_HISTORY_MAX) jackpotHistory.length = JACKPOT_HISTORY_MAX;
+  for(const [cws] of clients){
+    if(cws.readyState !== WebSocket.OPEN) continue;
+    try{ cws.send(JSON.stringify({type:'jackpotWin', username, tier, amount, at: Date.now()})); } catch(e){}
+  }
+}
+
 function broadcastJackpot(amount){
   for(const [cws] of clients){
     if(cws.readyState !== WebSocket.OPEN) continue;
