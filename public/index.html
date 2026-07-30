@@ -2,133 +2,281 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Neo Poker — Multiplayer</title>
+<title>Neo Poker — VIP Texas Poker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --felt-dark:#052e22; --felt:#0c4a36; --felt-light:#146b4f;
-    --rail:#3a2416; --rail-light:#5c3a24;
-    --gold:#d4af37; --gold-soft:#e8c766;
-    --cream:#f4ead9; --cream-dim:#c9bfa9;
-    --red-suit:#c0392b; --black-suit:#1c1c1c;
-    --hero:#d4af37; --villain:#a9455c;
-    --panel:#08201a;
+    --bg-deep:#160a35; --bg-mid:#2c1367; --bg-glow:#4c2599;
+    --purple:#7c3aed; --purple-bright:#a855f7; --magenta:#d946ef;
+    --cyan:#22d3ee; --gold:#ffd54a; --gold-deep:#f5a623;
+    --blue-top:#6cd4ff; --blue-bot:#0d6fb8;
+    --green-felt:#0f3d2e; --green-felt-light:#1a6b4d;
+    --ink:#1c1030;
+    --text:#ffffff; --text-dim:#c9baed;
+    --red-suit:#e33d5c; --black-suit:#241933;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:radial-gradient(ellipse at top, #0e1a15, #050a08 70%); color:var(--cream); font-family:'Inter', sans-serif; min-height:100vh; display:flex; justify-content:center; padding:26px 14px 44px;}
-  .app{width:100%; max-width:860px;}
-  header{text-align:center; margin-bottom:18px;}
-  .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold-soft); opacity:.85;}
-  h1{font-family:'Fraunces', serif; font-weight:600; font-size:28px; margin:6px 0 4px;}
-  .subtitle{color:var(--cream-dim); font-size:13px;}
-  .conn-status{font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-align:center; margin-bottom:10px;}
-  .conn-status.ok{color:#7dc98f;} .conn-status.bad{color:#e08a9d;}
+  body{
+    margin:0; min-height:100vh; color:var(--text);
+    font-family:'Nunito', sans-serif;
+    background:
+      radial-gradient(ellipse 900px 600px at 50% -10%, var(--bg-glow), transparent 60%),
+      radial-gradient(ellipse 800px 500px at 10% 100%, #3a1a6e, transparent 55%),
+      radial-gradient(ellipse 800px 500px at 90% 100%, #3a1a6e, transparent 55%),
+      linear-gradient(180deg, var(--bg-deep), #0d0524);
+    display:flex; justify-content:center; padding:18px 12px 40px;
+    overflow-x:hidden;
+  }
+  .app{width:100%; max-width:1040px;}
+  .hidden{display:none !important;}
+  h1,h2,h3{font-family:'Baloo 2', cursive; margin:0;}
+  .glow-text{text-shadow:0 0 10px rgba(255,255,255,.35);}
 
-  .panel-box{background:var(--panel); border-radius:14px; padding:22px; box-shadow:inset 0 0 0 1px rgba(212,175,55,.15); max-width:400px; margin:0 auto;}
-  .panel-box label{display:block; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--cream-dim); margin:12px 0 5px;}
-  .panel-box input, .panel-box select{width:100%; padding:10px; border-radius:8px; border:none; background:rgba(255,255,255,.08); color:var(--cream); font-family:'Inter'; font-size:14px;}
-  .panel-box button.primary{width:100%; margin-top:16px; padding:12px; border-radius:10px; border:none; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05; font-weight:600; font-size:14px; cursor:pointer;}
-  .panel-box .switch-mode{text-align:center; margin-top:14px; font-size:12.5px; color:var(--cream-dim);}
-  .panel-box .switch-mode a{color:var(--gold-soft); cursor:pointer; text-decoration:underline;}
-  .auth-error{text-align:center; color:#e08a9d; font-size:12.5px; margin-top:10px; min-height:16px; font-family:'IBM Plex Mono', monospace;}
+  /* ================= Auth screen ================= */
+  #authScreen{
+    max-width:400px; margin:60px auto 0;
+    background:linear-gradient(180deg, rgba(124,58,237,.25), rgba(20,10,45,.7));
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:20px; padding:30px 26px;
+    box-shadow:0 0 0 1px rgba(168,85,247,.25), 0 20px 60px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .auth-logo{text-align:center; font-family:'Baloo 2',cursive; font-weight:800; font-size:26px; letter-spacing:.02em; margin-bottom:4px;}
+  .auth-logo .vip-chip{
+    display:inline-block; background:linear-gradient(180deg,#f3c94a,#c9861a); color:#3a1a00;
+    border-radius:20px; padding:2px 12px; font-size:13px; margin-right:8px; box-shadow:0 0 12px rgba(255,213,74,.6);
+  }
+  .auth-sub{text-align:center; color:var(--text-dim); font-size:12.5px; margin-bottom:20px;}
+  #authScreen label{display:block; font-size:11.5px; color:var(--text-dim); font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin:14px 0 6px;}
+  #authScreen input{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.15);
+    background:rgba(0,0,0,.25); color:var(--text); font-family:'Nunito'; font-size:14.5px; font-weight:600;
+  }
+  #authScreen input:focus{outline:none; border-color:var(--cyan); box-shadow:0 0 0 3px rgba(34,211,238,.2);}
+  .btn-quickstart, .panel-box button.primary, #authSubmitBtn{
+    width:100%; margin-top:20px; padding:14px; border-radius:14px; border:none; cursor:pointer;
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:17px; letter-spacing:.02em; color:#fff;
+    background:linear-gradient(180deg, var(--blue-top), var(--blue-bot));
+    box-shadow:0 6px 0 #08507f, 0 10px 24px -6px rgba(13,111,184,.7), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .08s ease;
+  }
+  .btn-quickstart:active, #authSubmitBtn:active{transform:translateY(4px); box-shadow:0 2px 0 #08507f;}
+  .auth-error{text-align:center; color:#ff8fa3; font-size:12.5px; margin-top:12px; min-height:16px; font-weight:700;}
+  .switch-mode{text-align:center; margin-top:16px; font-size:12.5px; color:var(--text-dim);}
+  .switch-mode a{color:var(--gold); cursor:pointer; text-decoration:underline; font-weight:700;}
 
-  .lobby-header{display:flex; justify-content:space-between; align-items:center; background:var(--panel); border-radius:12px; padding:12px 18px; margin-bottom:16px;}
-  .lobby-header .who{font-family:'IBM Plex Mono', monospace; font-size:13px;}
-  .lobby-header .who b{color:var(--gold-soft);}
-  .lobby-header .admin-tag{background:rgba(212,175,55,.2); color:var(--gold-soft); border-radius:6px; padding:2px 8px; font-size:10.5px; margin-left:8px;}
-  .lobby-header button{background:transparent; border:1px solid rgba(244,234,217,.3); color:var(--cream); border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer;}
+  .conn-status{font-family:'IBM Plex Mono', monospace; font-size:10px; text-align:center; margin-bottom:8px; opacity:.8;}
+  .conn-status.ok{color:#7dc98f;} .conn-status.bad{color:#ff8fa3;}
 
-  .table-cards{display:flex; flex-direction:column; gap:12px;}
-  .table-card{background:var(--panel); border-radius:14px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; box-shadow:inset 0 0 0 1px rgba(212,175,55,.14);}
-  .table-card .stake-name{font-family:'Fraunces', serif; font-weight:600; font-size:19px; color:var(--gold-soft);}
-  .table-card .stake-sub{font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--cream-dim); margin-top:4px;}
-  .table-card .actions{display:flex; gap:8px; align-items:center;}
-  .table-card button.join-btn{background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05; border:none; border-radius:8px; padding:10px 16px; font-weight:600; font-size:13px; cursor:pointer;}
-  .table-card button.join-btn:disabled{opacity:.4; cursor:not-allowed;}
-  .table-card button.watch-btn{background:rgba(169,69,92,.18); color:#e08a9d; border:none; border-radius:8px; padding:10px 14px; font-weight:600; font-size:12.5px; cursor:pointer;}
-  .table-card button.watch-btn.active{background:var(--villain); color:var(--cream);}
+  /* ================= Lobby topbar ================= */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:linear-gradient(180deg, rgba(76,37,153,.55), rgba(28,16,48,.55));
+    border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:10px 18px; margin-bottom:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+    flex-wrap:wrap;
+  }
+  .player-chip{display:flex; align-items:center; gap:10px;}
+  .avatar{
+    width:44px; height:44px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg, var(--magenta), var(--purple));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Baloo 2',cursive; font-weight:800; font-size:18px; color:#fff;
+    box-shadow:0 0 0 3px rgba(255,255,255,.18), 0 0 16px rgba(217,70,239,.55);
+  }
+  .balance-pill{
+    background:rgba(0,0,0,.35); border:1px solid rgba(255,213,74,.4); border-radius:20px;
+    padding:5px 14px; font-family:'Baloo 2',cursive; font-weight:700; font-size:14px; color:var(--gold);
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  .brand-title{
+    font-family:'Baloo 2',cursive; font-weight:800; font-size:22px; letter-spacing:.02em; text-align:center;
+    display:flex; align-items:center; gap:10px; color:#fff;
+  }
+  .vip-badge{
+    background:linear-gradient(180deg,#f3c94a,#c9861a); color:#3a1a00; border-radius:16px;
+    padding:3px 12px; font-size:13px; box-shadow:0 0 14px rgba(255,213,74,.6);
+  }
+  .topbar-right{display:flex; align-items:center; gap:10px;}
+  .admin-tag{background:linear-gradient(180deg,#ff8fa3,#c0304a); color:#fff; border-radius:10px; padding:4px 10px; font-size:11px; font-weight:800;}
+  .icon-btn{
+    width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08);
+    color:#fff; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.16);}
 
+  /* ================= Lobby body ================= */
+  .lobby-body{display:flex; gap:16px;}
+  .sidebar{
+    width:170px; flex-shrink:0; background:linear-gradient(180deg, rgba(76,37,153,.4), rgba(28,16,48,.4));
+    border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:16px 12px; height:fit-content;
+  }
+  .sidebar-title{
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:13px; color:var(--gold); text-align:center; margin-bottom:12px; letter-spacing:.06em;
+  }
+  .menu-item{
+    background:linear-gradient(180deg, #6b3fd6, #4322a0); border-radius:12px; padding:10px 12px; margin-bottom:8px;
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:12.5px; text-align:center; color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 3px 0 rgba(0,0,0,.25);
+  }
+  .menu-item.active{background:linear-gradient(180deg, var(--magenta), #9333ea); box-shadow:0 0 16px rgba(217,70,239,.6), inset 0 1px 0 rgba(255,255,255,.3);}
+  .menu-item.ghost{opacity:.4; cursor:not-allowed;}
+
+  .tables-area{flex:1; min-width:0;}
+  .table-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:18px;}
+
+  .table-card{
+    position:relative; border-radius:16px; overflow:hidden; height:260px;
+    border:2px solid rgba(34,211,238,.45); box-shadow:0 10px 30px -10px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .table-card .scene{position:absolute; inset:0;}
+  .table-card .scene-sky{position:absolute; inset:0;}
+  .table-card .stars{position:absolute; inset:0; background-image:radial-gradient(1.5px 1.5px at 20% 20%, #fff, transparent), radial-gradient(1.5px 1.5px at 60% 10%, #fff, transparent), radial-gradient(1px 1px at 80% 25%, #fff, transparent), radial-gradient(1.5px 1.5px at 40% 15%, #fff, transparent), radial-gradient(1px 1px at 90% 8%, #fff, transparent); opacity:.7;}
+  .table-card .content{position:relative; padding:14px 16px 16px; background:linear-gradient(180deg, transparent, rgba(6,3,18,.55) 40%, rgba(6,3,18,.92));}
+  .table-card .tier-name{font-family:'Baloo 2',cursive; font-weight:800; font-size:19px; text-shadow:0 2px 6px rgba(0,0,0,.6);}
+  .table-card .tier-sub{font-family:'Nunito'; font-weight:700; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; opacity:.85; margin-bottom:8px;}
+  .stakes-pill{
+    display:inline-block; border-radius:10px; padding:5px 12px; font-family:'Baloo 2',cursive; font-weight:700; font-size:14px;
+    margin-bottom:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.15);
+  }
+  .stakes-pill .unit{display:block; font-family:'Nunito'; font-size:9px; letter-spacing:.1em; font-weight:800; opacity:.85;}
+  .buyin-row{font-family:'Nunito'; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .buyin-row b{color:var(--gold); font-size:12.5px;}
+  .table-card .seat-count{font-size:10.5px; color:var(--text-dim); font-weight:700;}
+
+  .join-btn{
+    width:100%; padding:9px; border-radius:10px; border:none; cursor:pointer;
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:13px; color:#fff;
+    background:linear-gradient(180deg, #34d399, #0d9268);
+    box-shadow:0 4px 0 #076347, inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .join-btn:active{transform:translateY(3px); box-shadow:0 1px 0 #076347;}
+  .join-btn:disabled{background:linear-gradient(180deg,#6b6b7a,#44404f); box-shadow:0 4px 0 #2b2833; cursor:not-allowed; opacity:.7;}
+  .watch-btn{
+    width:100%; margin-top:6px; padding:7px; border-radius:10px; border:none; cursor:pointer;
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:11.5px; color:#fff;
+    background:rgba(217,70,239,.25); border:1px solid rgba(217,70,239,.55);
+  }
+  .watch-btn.active{background:linear-gradient(180deg, var(--magenta), #9333ea);}
+
+  /* tier color themes */
+  .tier-1000 .scene-sky{background:linear-gradient(180deg,#ffcf6b 0%,#ff8a5c 35%,#7a3a63 75%,#2c1440 100%);}
+  .tier-1000{border-color:rgba(74,222,128,.55);}
+  .tier-1000 .stakes-pill{background:rgba(74,222,128,.18); color:#6ee7a4;}
+  .tier-5000 .scene-sky{background:linear-gradient(180deg,#1a3a6b 0%,#204a8a 40%,#12224a 75%,#0b1330 100%);}
+  .tier-5000{border-color:rgba(56,189,248,.55);}
+  .tier-5000 .stakes-pill{background:rgba(56,189,248,.18); color:#7dd3fc;}
+  .tier-10000 .scene-sky{background:linear-gradient(180deg,#5b1230 0%,#8a1f4a 35%,#3a1050 75%,#170a2e 100%);}
+  .tier-10000{border-color:rgba(244,114,182,.6);}
+  .tier-10000 .stakes-pill{background:rgba(244,114,182,.18); color:#f9a8d4;}
+
+  .skyline{position:absolute; left:0; right:0; bottom:0; height:46%;}
+
+  .quickstart-wrap{text-align:center; margin-top:6px;}
+  .quickstart-btn{
+    max-width:340px; margin:0 auto; display:block;
+  }
+
+  /* ================= Game screen (table felt, restyled) ================= */
+  .admin-banner{text-align:center; font-family:'Baloo 2',cursive; font-weight:700; font-size:12px; background:linear-gradient(180deg, rgba(244,114,182,.25), rgba(139,20,70,.25)); color:#f9a8d4; padding:8px; border-radius:12px; margin-bottom:12px; border:1px solid rgba(244,114,182,.4);}
   .setup-bar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
-  .setup-item{flex:1; min-width:150px; background:var(--panel); border-radius:12px; padding:9px 14px; display:flex; align-items:center; justify-content:center; gap:8px;}
-  .setup-item button{background:rgba(212,175,55,.18); color:var(--gold-soft); border:none; border-radius:8px; padding:7px 12px; font-size:12px; cursor:pointer; font-family:'Inter';}
-  .setup-item button:hover{background:rgba(212,175,55,.3);}
+  .setup-item button{
+    background:linear-gradient(180deg,#6b3fd6,#4322a0); color:#fff; border:none; border-radius:10px; padding:9px 14px;
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:12px; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.3);
+  }
 
-  .table-frame{background:linear-gradient(180deg, var(--rail-light), var(--rail)); border-radius:24px; padding:12px; box-shadow:0 20px 50px -18px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.05);}
-  .table-felt{background:radial-gradient(ellipse at 50% 15%, var(--felt-light), var(--felt) 55%, var(--felt-dark) 100%); border-radius:16px; padding:20px 16px 18px; box-shadow:inset 0 0 60px rgba(0,0,0,.55), inset 0 0 0 2px rgba(212,175,55,.18);}
-
-  .admin-banner{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11px; background:rgba(169,69,92,.15); color:#e08a9d; padding:8px; border-radius:8px; margin-bottom:12px;}
+  .table-frame{
+    background:linear-gradient(180deg, #4a2f14, #2a1a0c); border-radius:26px; padding:12px;
+    box-shadow:0 20px 50px -18px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,213,74,.25);
+  }
+  .table-felt{
+    background:radial-gradient(ellipse at 50% 10%, var(--green-felt-light), var(--green-felt) 55%, #072318 100%);
+    border-radius:18px; padding:20px 16px 18px; box-shadow:inset 0 0 70px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,213,74,.3);
+  }
 
   .seats-grid{display:flex; flex-wrap:wrap; justify-content:center; gap:12px 18px; margin-bottom:14px;}
-  .seat{display:flex; flex-direction:column; align-items:center; gap:5px; padding:6px; border-radius:12px; transition:box-shadow .3s; min-width:80px;}
-  .seat.active-turn{box-shadow:0 0 0 2px var(--gold-soft), 0 0 14px rgba(212,175,55,.5);}
+  .seat{display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 6px; border-radius:14px; transition:box-shadow .3s; min-width:82px;}
+  .seat.active-turn{box-shadow:0 0 0 2px var(--gold), 0 0 16px rgba(255,213,74,.6); background:rgba(255,213,74,.06);}
   .seat.folded{opacity:.35; filter:grayscale(.6);}
   .seat.disconnected{opacity:.5;}
-  .seat.me .seat-label{color:var(--gold-soft);}
-  .seat-label{font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.1em; color:var(--cream-dim); display:flex; align-items:center; gap:4px; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .pos-tag{background:rgba(212,175,55,.2); color:var(--gold-soft); border-radius:4px; padding:0 4px; font-size:8.5px; flex-shrink:0;}
-  .chip-count{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--gold-soft);}
-  .seat-equity{font-family:'IBM Plex Mono', monospace; font-size:10px; color:#e08a9d;}
-  .bet-chip{font-family:'IBM Plex Mono', monospace; font-size:10px; background:rgba(212,175,55,.15); color:var(--gold-soft); border-radius:8px; padding:1px 7px; min-height:14px;}
+  .seat.me .seat-label{color:var(--gold);}
+  .seat-label{font-family:'Baloo 2',cursive; font-size:10.5px; letter-spacing:.02em; color:var(--text-dim); display:flex; align-items:center; gap:4px; max-width:112px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700;}
+  .pos-tag{background:var(--gold); color:#3a1a00; border-radius:5px; padding:0 5px; font-size:8.5px; flex-shrink:0; font-weight:800;}
+  .chip-count{font-family:'Nunito', sans-serif; font-weight:800; font-size:12px; color:var(--gold);}
+  .seat-equity{font-family:'IBM Plex Mono', monospace; font-size:10px; color:#f9a8d4; font-weight:700;}
+  .bet-chip{font-family:'Nunito'; font-weight:800; font-size:10.5px; background:rgba(255,213,74,.18); color:var(--gold); border-radius:10px; padding:1px 8px; min-height:15px;}
 
   .cards-row{display:flex; gap:5px;}
-  .card{width:42px; height:58px; background:#fbf8f2; border-radius:6px; box-shadow:0 6px 14px -4px rgba(0,0,0,.55); display:flex; flex-direction:column; justify-content:space-between; padding:3px 4px; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:11px; line-height:1;}
+  .card{width:42px; height:58px; background:#fdfaf3; border-radius:7px; box-shadow:0 6px 14px -4px rgba(0,0,0,.6); display:flex; flex-direction:column; justify-content:space-between; padding:3px 4px; font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:11px; line-height:1;}
   .card.red{color:var(--red-suit);} .card.black{color:var(--black-suit);}
   .card .suit-big{align-self:center; font-size:15px;}
   .card .corner{display:flex; flex-direction:column; align-items:flex-start; gap:1px;}
   .card .corner.bottom{align-self:flex-end; transform:rotate(180deg);}
-  .card.board-slot{background:rgba(255,255,255,.06); box-shadow:inset 0 0 0 1.5px rgba(244,234,217,.22); opacity:.35;}
-  .card.face-down{background:repeating-linear-gradient(135deg, #7a2f40, #7a2f40 4px, #8f3a4d 4px, #8f3a4d 8px); box-shadow:0 6px 14px -4px rgba(0,0,0,.55), inset 0 0 0 2px rgba(244,234,217,.25);}
+  .card.board-slot{background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 1.5px rgba(255,213,74,.25); opacity:.35;}
+  .card.face-down{background:repeating-linear-gradient(135deg, #6b3fd6 0, #6b3fd6 4px, #8b5cf6 4px, #8b5cf6 8px); box-shadow:0 6px 14px -4px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.25);}
   .seat.me .card{width:50px; height:70px; font-size:13px;}
   .seat.me .card .suit-big{font-size:19px;}
 
   .center-row{display:flex; flex-direction:column; align-items:center; gap:8px; margin:10px 0;}
-  .street-tag{font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold-soft); opacity:.9;}
+  .street-tag{font-family:'Baloo 2',cursive; font-weight:700; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); opacity:.95;}
   .board-row{display:flex; gap:7px;}
-  .pot-display{font-family:'Fraunces', serif; font-weight:700; font-size:16px; color:var(--gold-soft); background:rgba(0,0,0,.25); padding:4px 14px; border-radius:20px; box-shadow:inset 0 0 0 1px rgba(212,175,55,.3);}
-  .my-equity{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--cream-dim); margin-top:6px; min-height:16px;}
-  .my-equity b{color:var(--gold-soft);}
+  .pot-display{font-family:'Baloo 2',cursive; font-weight:700; font-size:16px; color:var(--gold); background:rgba(0,0,0,.32); padding:5px 16px; border-radius:20px; box-shadow:inset 0 0 0 1px rgba(255,213,74,.35);}
+  .my-equity{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--text-dim); margin-top:6px; min-height:16px;}
+  .my-equity b{color:var(--gold);}
 
-  .log-panel{margin-top:16px; background:var(--panel); border-radius:12px; padding:10px 14px; max-height:110px; overflow-y:auto; box-shadow:inset 0 0 0 1px rgba(212,175,55,.12);}
-  .log-title{font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--cream-dim); margin-bottom:6px;}
-  .log-line{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--cream-dim); line-height:1.7;}
-  .log-line.win{color:var(--gold-soft);}
-  .hist-entry{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--cream-dim); padding:5px 0; border-bottom:1px solid rgba(255,255,255,.05); line-height:1.6;}
-  .hist-entry .hist-head{color:var(--gold-soft);}
+  .log-panel{margin-top:16px; background:rgba(28,16,48,.6); border-radius:14px; padding:10px 14px; max-height:110px; overflow-y:auto; box-shadow:inset 0 0 0 1px rgba(255,213,74,.18); border:1px solid rgba(255,255,255,.06);}
+  .log-title{font-family:'Baloo 2',cursive; font-weight:700; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px;}
+  .log-line{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-dim); line-height:1.7;}
+  .log-line.win{color:var(--gold);}
+  .hist-entry{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--text-dim); padding:5px 0; border-bottom:1px solid rgba(255,255,255,.06); line-height:1.6;}
+  .hist-entry .hist-head{color:var(--gold);}
 
   .action-bar{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
-  .action-bar button{flex:1; min-width:90px; font-family:'Inter'; font-weight:600; font-size:13.5px; padding:12px 10px; border-radius:10px; border:none; cursor:pointer;}
+  .action-bar button{flex:1; min-width:90px; font-family:'Baloo 2',cursive; font-weight:700; font-size:13.5px; padding:12px 10px; border-radius:12px; border:none; cursor:pointer;}
   .action-bar button:disabled{opacity:.35; cursor:not-allowed;}
-  .btn-fold{background:transparent; color:var(--cream); box-shadow:inset 0 0 0 1.5px rgba(244,234,217,.3);}
-  .btn-call{background:linear-gradient(180deg, #3f7a5e, #2b5943); color:var(--cream);}
-  .btn-raise{background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05;}
+  .btn-fold{background:rgba(255,255,255,.08); color:#fff; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25);}
+  .btn-call{background:linear-gradient(180deg, #34d399, #0d9268); color:#fff; box-shadow:0 4px 0 #076347;}
+  .btn-raise{background:linear-gradient(180deg, var(--gold), var(--gold-deep)); color:#3a1a00; box-shadow:0 4px 0 #a5680f;}
+  .action-bar button:active{transform:translateY(3px); box-shadow:none;}
+
   .primary-controls{display:flex; gap:10px; margin-top:12px;}
-  .primary-controls button{flex:1; font-family:'Inter'; font-weight:600; font-size:14px; padding:13px 16px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#241a05;}
-  .primary-controls button.secondary{background:transparent; color:var(--cream); box-shadow:inset 0 0 0 1.5px rgba(244,234,217,.3);}
-  .result-banner{text-align:center; font-family:'Fraunces', serif; font-size:14px; margin-top:12px; padding:10px; border-radius:10px; min-height:18px; color:var(--cream-dim);}
-  .result-banner.info{background:rgba(255,255,255,.06); color:var(--cream);}
-  .error-toast{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:12px; color:#e08a9d; margin-top:8px; min-height:16px;}
-  .hidden{display:none !important;}
+  .primary-controls button{flex:1;}
+  .primary-controls button.secondary{
+    background:rgba(255,255,255,.08); color:#fff; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25);
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:14px; padding:13px 16px; border-radius:12px; border:none; cursor:pointer;
+  }
+  .result-banner{text-align:center; font-family:'Baloo 2',cursive; font-size:14px; margin-top:12px; padding:10px; border-radius:12px; min-height:18px; color:var(--text-dim);}
+  .result-banner.info{background:rgba(255,213,74,.1); color:var(--gold);}
+  .error-toast{text-align:center; font-family:'IBM Plex Mono', monospace; font-size:12px; color:#ff8fa3; margin-top:8px; min-height:16px;}
+
+  @media (max-width:700px){
+    .lobby-body{flex-direction:column;}
+    .sidebar{width:100%; display:flex; gap:8px; overflow-x:auto;}
+    .sidebar-title{display:none;}
+    .menu-item{white-space:nowrap; margin-bottom:0;}
+  }
+  @media (max-width:420px){
+    .card{width:36px; height:50px; font-size:10px;}
+    .seat.me .card{width:44px; height:62px; font-size:12px;}
+    .brand-title{font-size:17px;}
+  }
 </style>
 </head>
 <body>
 <div class="app">
-  <header>
-    <div class="eyebrow">Neo Poker Lab</div>
-    <h1>Multiplayer thật</h1>
-    <div class="subtitle">Đăng nhập · Chọn bàn theo mức chip · Chơi cùng bạn bè</div>
-  </header>
   <div class="conn-status" id="connStatus">Đang kết nối...</div>
 
   <!-- AUTH SCREEN -->
-  <div id="authScreen" class="panel-box">
-    <div id="authTitle" style="text-align:center; font-family:'Fraunces',serif; font-size:17px; color:var(--gold-soft);">Đăng nhập</div>
+  <div id="authScreen">
+    <div class="auth-logo"><span class="vip-chip">VIP</span>NEO POKER</div>
+    <div class="auth-sub" id="authTitle">Đăng nhập để vào bàn</div>
     <label>Tên đăng nhập</label>
     <input id="authUsername" maxlength="20" placeholder="vd: dungpro">
     <label>Mật khẩu</label>
     <input id="authPassword" type="password" placeholder="Tối thiểu 4 ký tự">
-    <button class="primary" id="authSubmitBtn">Đăng nhập</button>
+    <button id="authSubmitBtn">Đăng nhập</button>
     <div class="auth-error" id="authError">&nbsp;</div>
     <div class="switch-mode">
       <span id="switchModePrompt">Chưa có tài khoản?</span> <a id="switchModeLink">Đăng ký ngay</a>
@@ -137,11 +285,32 @@
 
   <!-- LOBBY SCREEN -->
   <div id="lobbyScreen" class="hidden">
-    <div class="lobby-header">
-      <div class="who">Xin chào, <b id="lobbyUsername"></b><span class="admin-tag hidden" id="adminTag">ADMIN</span><br>Số dư: <b id="lobbyChips" style="color:var(--gold-soft)"></b> chip</div>
-      <button id="logoutBtn">Đăng xuất</button>
+    <div class="topbar">
+      <div class="player-chip">
+        <div class="avatar" id="avatarInitial">?</div>
+        <div>
+          <div style="font-family:'Baloo 2',cursive; font-weight:700; font-size:14px;" id="lobbyUsername"></div>
+          <div class="balance-pill">🪙 <span id="lobbyChips">0</span></div>
+        </div>
+      </div>
+      <div class="brand-title"><span class="vip-badge">VIP</span> TEXAS POKER</div>
+      <div class="topbar-right">
+        <span class="admin-tag hidden" id="adminTag">ADMIN</span>
+        <button class="icon-btn" id="logoutBtn" title="Đăng xuất">⏻</button>
+      </div>
     </div>
-    <div class="table-cards" id="tableCards"></div>
+
+    <div class="lobby-body">
+      <aside class="sidebar">
+        <div class="sidebar-title">GAME MENU</div>
+        <div class="menu-item active">🃏 Texas Poker</div>
+        <div class="menu-item ghost">🎰 Slots (sắp có)</div>
+        <div class="menu-item ghost">🎡 Roulette (sắp có)</div>
+      </aside>
+      <main class="tables-area">
+        <div class="table-cards" id="tableCards"></div>
+      </main>
+    </div>
   </div>
 
   <!-- GAME SCREEN -->
@@ -173,7 +342,7 @@
     </div>
 
     <div class="primary-controls">
-      <button id="startBtn">Bắt đầu ván</button>
+      <button class="btn-quickstart" id="startBtn">Bắt đầu ván</button>
     </div>
 
     <div class="result-banner" id="resultBanner">&nbsp;</div>
@@ -197,11 +366,58 @@ const SUIT_COLOR={S:'black',C:'black',H:'red',D:'red'};
 function rankLabel(r){return RANK_LABEL[r]||String(r);}
 function fmt(n){return Math.round(n).toLocaleString('en-US');}
 
+const TIER_THEME = {
+  1000:  { key:'tier-1000',  name:'Sảnh Khởi Đầu',    sub:'Tropic Night' },
+  5000:  { key:'tier-5000',  name:'Đô Thành Sang Trọng', sub:'Luxury Skyline' },
+  10000: { key:'tier-10000', name:'Vegas Rực Rỡ',      sub:'Glamour Night' }
+};
+function skylineSVG(tint){
+  // simple hand-drawn silhouette, reused across tiers via currentColor + opacity layers
+  return `<svg class="skyline" viewBox="0 0 300 110" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <g fill="${tint}" opacity="0.55">
+      <rect x="0" y="55" width="26" height="55"/><rect x="30" y="35" width="20" height="75"/>
+      <rect x="54" y="60" width="24" height="50"/><rect x="82" y="20" width="18" height="90"/>
+      <rect x="104" y="45" width="26" height="65"/><rect x="134" y="30" width="16" height="80"/>
+      <rect x="154" y="58" width="24" height="52"/><rect x="182" y="15" width="20" height="95"/>
+      <rect x="206" y="50" width="22" height="60"/><rect x="232" y="34" width="18" height="76"/>
+      <rect x="254" y="62" width="24" height="48"/><rect x="282" y="42" width="18" height="68"/>
+    </g>
+    <g fill="#ffe9a8" opacity="0.8">
+      <rect x="6" y="62" width="3" height="3"/><rect x="14" y="70" width="3" height="3"/>
+      <rect x="36" y="45" width="3" height="3"/><rect x="36" y="58" width="3" height="3"/>
+      <rect x="88" y="30" width="3" height="3"/><rect x="88" y="45" width="3" height="3"/><rect x="88" y="60" width="3" height="3"/>
+      <rect x="110" y="55" width="3" height="3"/><rect x="118" y="68" width="3" height="3"/>
+      <rect x="188" y="25" width="3" height="3"/><rect x="188" y="40" width="3" height="3"/><rect x="188" y="55" width="3" height="3"/>
+      <rect x="212" y="60" width="3" height="3"/><rect x="238" y="45" width="3" height="3"/>
+      <rect x="260" y="70" width="3" height="3"/><rect x="288" y="52" width="3" height="3"/>
+    </g>
+  </svg>`;
+}
+function palmSVG(){
+  return `<svg class="skyline" viewBox="0 0 300 110" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <g fill="#0d3b2e" opacity="0.65">
+      <ellipse cx="150" cy="108" rx="160" ry="14"/>
+      <rect x="40" y="40" width="6" height="60"/>
+      <path d="M43 40 C20 30, 5 34, 2 44 C20 40, 34 44, 43 46 Z"/>
+      <path d="M43 40 C60 26, 76 30, 80 40 C62 38, 50 42, 43 46 Z"/>
+      <path d="M43 40 C34 20, 40 6, 48 2 C42 18, 42 32, 43 46 Z"/>
+      <rect x="250" y="55" width="5" height="45"/>
+      <path d="M252 55 C236 48, 224 50, 220 58 C234 55, 244 58, 252 60 Z"/>
+      <path d="M252 55 C266 44, 278 48, 281 56 C268 54, 259 58, 252 60 Z"/>
+    </g>
+  </svg>`;
+}
+function sceneSVGFor(stake){
+  if(stake===1000) return palmSVG();
+  if(stake===5000) return skylineSVG('#0a1c3d');
+  return skylineSVG('#3a0a26');
+}
+
 let ws=null;
 let authMode='login';
 let me={username:null, chips:0, isAdmin:false};
 let lobbyTables={};
-let state=null;       // current table game state (if seated or spectating)
+let state=null;
 let currentTableStake=null;
 let spectatingStake=null;
 const STREET_LABELS=['Preflop','Flop','Turn','River','Ngã bài'];
@@ -219,10 +435,7 @@ function connect(){
   };
   ws.onclose = ()=>{ document.getElementById('connStatus').textContent='Mất kết nối — đang thử lại...'; document.getElementById('connStatus').className='conn-status bad'; setTimeout(connect, 2000); };
   ws.onerror = ()=>{};
-  ws.onmessage = (ev)=>{
-    const data = JSON.parse(ev.data);
-    handleServerMessage(data);
-  };
+  ws.onmessage = (ev)=>{ handleServerMessage(JSON.parse(ev.data)); };
 }
 connect();
 function send(obj){ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
@@ -236,6 +449,7 @@ function handleServerMessage(data){
     me = {username:data.username, chips:data.chips, isAdmin:data.isAdmin};
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('lobbyScreen').classList.remove('hidden');
+    document.getElementById('avatarInitial').textContent = me.username.charAt(0).toUpperCase();
     renderLobby();
   }
   else if(data.type==='authError'){
@@ -250,13 +464,11 @@ function handleServerMessage(data){
   else if(data.type==='leftTable'){
     if(data.chips!==null) me.chips = data.chips;
     currentTableStake = null;
-    lsDel('neoPokerToken_'+state?.stake);
     document.getElementById('gameScreen').classList.add('hidden');
     document.getElementById('lobbyScreen').classList.remove('hidden');
     renderLobby();
   }
   else if(data.type==='rejoinFailed'){
-    // token invalid/expired -> just go to lobby
     document.getElementById('gameScreen').classList.add('hidden');
     document.getElementById('lobbyScreen').classList.remove('hidden');
   }
@@ -278,8 +490,8 @@ function showError(msg){
 /* ---------- Auth screen ---------- */
 document.getElementById('switchModeLink').addEventListener('click', ()=>{
   authMode = authMode==='login' ? 'register' : 'login';
-  document.getElementById('authTitle').textContent = authMode==='login' ? 'Đăng nhập' : 'Đăng ký tài khoản mới';
-  document.getElementById('authSubmitBtn').textContent = authMode==='login' ? 'Đăng nhập' : 'Đăng ký (nhận 5,000 chip)';
+  document.getElementById('authTitle').textContent = authMode==='login' ? 'Đăng nhập để vào bàn' : 'Đăng ký — nhận ngay 5,000 chip';
+  document.getElementById('authSubmitBtn').textContent = authMode==='login' ? 'Đăng nhập' : 'Đăng ký';
   document.getElementById('switchModePrompt').textContent = authMode==='login' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?';
   document.getElementById('switchModeLink').textContent = authMode==='login' ? 'Đăng ký ngay' : 'Đăng nhập';
   document.getElementById('authError').textContent = '\u00A0';
@@ -290,9 +502,7 @@ document.getElementById('authSubmitBtn').addEventListener('click', ()=>{
   if(!username || !password){ document.getElementById('authError').textContent='Nhập đầy đủ tên đăng nhập và mật khẩu.'; return; }
   send({type: authMode, username, password});
 });
-document.getElementById('logoutBtn').addEventListener('click', ()=>{
-  location.reload();
-});
+document.getElementById('logoutBtn').addEventListener('click', ()=> location.reload());
 
 /* ---------- Lobby screen ---------- */
 function renderLobby(){
@@ -305,17 +515,23 @@ function renderLobby(){
   Object.keys(lobbyTables).sort((a,b)=>a-b).forEach(stakeStr=>{
     const stake = Number(stakeStr);
     const t = lobbyTables[stakeStr];
-    const card = document.createElement('div');
-    card.className='table-card';
+    const theme = TIER_THEME[stake] || {key:'tier-5000', name:'Bàn '+fmt(stake), sub:''};
     const canJoin = me.chips >= stake && t.seatsFilled < t.maxSeats;
+    const card = document.createElement('div');
+    card.className = 'table-card ' + theme.key;
     card.innerHTML = `
-      <div>
-        <div class="stake-name">Bàn ${fmt(stake)} chip</div>
-        <div class="stake-sub">${t.seatsFilled}/${t.maxSeats} chỗ ${t.inHand ? '· đang chơi' : ''}</div>
+      <div class="scene">
+        <div class="scene-sky"></div>
+        <div class="stars"></div>
+        ${sceneSVGFor(stake)}
       </div>
-      <div class="actions">
-        ${me.isAdmin ? `<button class="watch-btn ${spectatingStake===stake?'active':''}" data-stake="${stake}" data-action="watch">${spectatingStake===stake?'Đang giám sát':'Giám sát'}</button>` : ''}
-        <button class="join-btn" data-stake="${stake}" data-action="join" ${canJoin?'':'disabled'}>Vào bàn</button>
+      <div class="content">
+        <div class="tier-name">${theme.name}</div>
+        <div class="tier-sub">${theme.sub}</div>
+        <div class="stakes-pill">${fmt(stake/2)}/${fmt(stake)}<span class="unit">STAKES</span></div>
+        <div class="buyin-row"><span>Chỗ: ${t.seatsFilled}/${t.maxSeats} ${t.inHand?'· đang chơi':''}</span><b>${fmt(stake)}</b></div>
+        ${me.isAdmin ? `<button class="watch-btn ${spectatingStake===stake?'active':''}" data-stake="${stake}" data-action="watch">${spectatingStake===stake?'👁 Đang giám sát':'👁 Giám sát'}</button>` : ''}
+        <button class="join-btn" data-stake="${stake}" data-action="join" ${canJoin?'':'disabled'} style="margin-top:6px;">Vào bàn</button>
       </div>
     `;
     container.appendChild(card);
