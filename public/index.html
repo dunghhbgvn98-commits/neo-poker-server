@@ -200,6 +200,36 @@
   .modal-cancel{background:rgba(255,255,255,.08); color:#fff;}
   .modal-confirm{background:linear-gradient(180deg, var(--gold), var(--gold-deep)); color:#3a1a00;}
 
+  .deposit-btn, .withdraw-btn{
+    border:none; border-radius:12px; padding:8px 14px; font-family:'Baloo 2',cursive; font-weight:700; font-size:12px;
+    cursor:pointer; color:#fff; box-shadow:0 3px 0 rgba(0,0,0,.3);
+  }
+  .deposit-btn{background:linear-gradient(180deg, #34d399, #0d9268);}
+  .withdraw-btn{background:linear-gradient(180deg, #f472b6, #c02a72);}
+  .deposit-btn:active, .withdraw-btn:active{transform:translateY(2px); box-shadow:none;}
+
+  .dw-tiers{display:flex; flex-direction:column; gap:8px; margin:14px 0;}
+  .dw-tier-btn{
+    display:flex; justify-content:space-between; align-items:center; width:100%;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15); border-radius:12px;
+    padding:12px 16px; cursor:pointer; transition:background .15s, border-color .15s;
+  }
+  .dw-tier-btn:hover{background:rgba(255,213,74,.12); border-color:rgba(255,213,74,.4);}
+  .dw-tier-chip{font-family:'Baloo 2',cursive; font-weight:700; font-size:14px; color:#fff;}
+  .dw-tier-yen{font-family:'Nunito'; font-weight:800; font-size:14px; color:var(--gold);}
+  .dw-contact-box{
+    background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.3); border-radius:12px;
+    padding:14px; margin:14px 0; text-align:center;
+  }
+  .dw-contact-title{font-family:'Baloo 2',cursive; font-weight:700; font-size:13.5px; color:#fff; margin-bottom:10px;}
+  .dw-fb-link{
+    display:inline-block; background:linear-gradient(180deg, #6cd4ff, #0d6fb8); color:#fff; text-decoration:none;
+    font-family:'Baloo 2',cursive; font-weight:700; font-size:13px; padding:10px 18px; border-radius:10px;
+    box-shadow:0 3px 0 #08507f;
+  }
+  .dw-fb-link:active{transform:translateY(2px); box-shadow:none;}
+  .dw-contact-note{font-family:'Nunito'; font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+
   @media (max-width:900px){
     .lobby-body{flex-wrap:wrap;}
     .leaderboard-panel{width:100%;}
@@ -217,12 +247,28 @@
   .jackpot-ticker #jackpotTickerAmount{color:#fff9c4;}
   .menu-item[data-menu]{cursor:pointer;}
 
+  .slots-layout{display:flex; gap:16px; align-items:flex-start; justify-content:center; max-width:760px; margin:20px auto 0; flex-wrap:wrap;}
   .slots-machine{
-    max-width:420px; margin:20px auto 0; background:linear-gradient(180deg, rgba(76,37,153,.4), rgba(20,10,45,.7));
+    flex:1; min-width:300px; max-width:420px; background:linear-gradient(180deg, rgba(76,37,153,.4), rgba(20,10,45,.7));
     border:1px solid rgba(255,213,74,.3); border-radius:24px; padding:26px 24px;
     box-shadow:0 20px 50px -18px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
     text-align:center;
   }
+  .jackpot-history-panel{
+    width:250px; flex-shrink:0; background:linear-gradient(180deg, rgba(76,37,153,.4), rgba(28,16,48,.4));
+    border:1px solid rgba(255,213,74,.25); border-radius:16px; padding:16px 14px; height:fit-content;
+    max-height:420px; overflow-y:auto;
+  }
+  .jh-row{display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid rgba(255,255,255,.06);}
+  .jh-row:last-child{border-bottom:none;}
+  .jh-tier-badge{font-size:16px; flex-shrink:0;}
+  .jh-info{flex:1; min-width:0;}
+  .jh-name{font-family:'Nunito'; font-weight:700; font-size:12px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .jh-amount{font-family:'Baloo 2',cursive; font-weight:700; font-size:12.5px;}
+  .jh-amount.big{color:var(--gold);}
+  .jh-amount.small{color:#22d3ee;}
+  .jh-time{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-dim); flex-shrink:0;}
+  @media (max-width:700px){ .slots-layout{flex-direction:column; align-items:stretch;} .jackpot-history-panel{width:auto; max-height:220px;} }
   .jackpot-display{margin-bottom:20px;}
   .jackpot-label{font-family:'Nunito'; font-weight:800; font-size:11px; letter-spacing:.12em; color:var(--text-dim);}
   .jackpot-amount{
@@ -530,6 +576,8 @@
     <div class="auth-sub" id="authTitle">Đăng nhập để vào bàn</div>
     <label>Tên đăng nhập</label>
     <input id="authUsername" maxlength="20" placeholder="vd: dungpro">
+    <label id="authPhoneLabel" class="hidden">Số điện thoại</label>
+    <input id="authPhone" class="hidden" maxlength="15" placeholder="vd: 0912345678">
     <label>Mật khẩu</label>
     <input id="authPassword" type="password" placeholder="Tối thiểu 4 ký tự">
     <button id="authSubmitBtn">Đăng nhập</button>
@@ -551,13 +599,15 @@
       </div>
       <div class="brand-title"><span class="vip-badge">VIP</span> TEXAS POKER</div>
       <div class="topbar-right">
+        <button class="deposit-btn" id="openDepositBtn">💰 Nạp chip</button>
+        <button class="withdraw-btn" id="openWithdrawBtn">💸 Rút chip</button>
         <span class="admin-tag hidden" id="adminTag">ADMIN</span>
         <button class="icon-btn" id="logoutBtn" title="Đăng xuất">⏻</button>
       </div>
     </div>
 
     <div class="jackpot-ticker" id="jackpotTicker">
-      🎰 HŨ JACKPOT: <span id="jackpotTickerAmount">...</span> chip — quay miễn phí, trúng là ẵm trọn!
+      🎰 HŨ JACKPOT: <span id="jackpotTickerAmount">...</span> chip — quay 50 chip/lượt, trúng là ẵm lớn!
     </div>
 
     <div class="lobby-body">
@@ -595,6 +645,38 @@
       <div class="modal-actions">
         <button class="modal-cancel" id="modalCancelBtn">Huỷ</button>
         <button class="modal-confirm" id="modalConfirmBtn">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPOSIT / WITHDRAW MODAL -->
+  <div id="depositWithdrawModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-title" id="dwModalTitle">Nạp chip</div>
+      <div class="modal-target" id="dwModalSub">Chọn mốc bạn muốn nạp:</div>
+      <div class="dw-tiers" id="dwTiersList">
+        <button class="dw-tier-btn" data-chips="10000" data-yen="1000">
+          <span class="dw-tier-chip">🪙 10,000 chip</span>
+          <span class="dw-tier-yen">1,000円</span>
+        </button>
+        <button class="dw-tier-btn" data-chips="50000" data-yen="5000">
+          <span class="dw-tier-chip">🪙 50,000 chip</span>
+          <span class="dw-tier-yen">5,000円</span>
+        </button>
+        <button class="dw-tier-btn" data-chips="100000" data-yen="10000">
+          <span class="dw-tier-chip">🪙 100,000 chip</span>
+          <span class="dw-tier-yen">10,000円</span>
+        </button>
+      </div>
+      <div class="dw-contact-box hidden" id="dwContactBox">
+        <div class="dw-contact-title" id="dwContactTitle"></div>
+        <a href="https://www.facebook.com/dodung2019/" target="_blank" rel="noopener" class="dw-fb-link">
+          📩 Liên hệ admin qua Facebook
+        </a>
+        <div class="dw-contact-note">Admin sẽ xác nhận và cộng/trừ chip vào tài khoản của bạn sau khi giao dịch hoàn tất.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="dwCloseBtn">Đóng</button>
       </div>
     </div>
   </div>
@@ -678,20 +760,25 @@
       </div>
     </div>
 
-    <div class="slots-machine">
-      <div class="jackpot-display">
-        <div class="jackpot-label">HŨ JACKPOT HIỆN TẠI</div>
-        <div class="jackpot-amount" id="jackpotAmount">...</div>
-        <button class="lb-edit-btn hidden" id="adminEditJackpotBtn" style="margin-top:6px;" title="Chỉnh hũ jackpot (admin)">✏️ Chỉnh hũ (admin)</button>
+    <div class="slots-layout">
+      <div class="slots-machine">
+        <div class="jackpot-display">
+          <div class="jackpot-label">HŨ JACKPOT HIỆN TẠI</div>
+          <div class="jackpot-amount" id="jackpotAmount">...</div>
+          <button class="lb-edit-btn hidden" id="adminEditJackpotBtn" style="margin-top:6px;" title="Chỉnh hũ jackpot (admin)">✏️ Chỉnh hũ (admin)</button>
+        </div>
+        <div class="reels-row" id="reelsRow">
+          <div class="reel"><div class="reel-symbol" id="reel0">🍒</div></div>
+          <div class="reel"><div class="reel-symbol" id="reel1">🍋</div></div>
+          <div class="reel"><div class="reel-symbol" id="reel2">🍇</div></div>
+        </div>
+        <div class="spin-result" id="spinResultText">&nbsp;</div>
+        <button class="btn-quickstart" id="spinBtn">🎰 QUAY (50 chip/lượt)</button>
       </div>
-      <div class="reels-row" id="reelsRow">
-        <div class="reel"><div class="reel-symbol" id="reel0">🍒</div></div>
-        <div class="reel"><div class="reel-symbol" id="reel1">🍋</div></div>
-        <div class="reel"><div class="reel-symbol" id="reel2">🍇</div></div>
-      </div>
-      <div class="spin-result" id="spinResultText">&nbsp;</div>
-      <button class="btn-quickstart" id="spinBtn">🎰 QUAY (50 chip · còn <span id="spinsRemainingText">10</span> lượt hôm nay)</button>
-      <div class="slots-note">Mỗi lượt quay tốn <b style="color:var(--gold)">50 chip</b>, toàn bộ góp vào hũ chung. Trúng 3 số 7️⃣7️⃣7️⃣ (0.5%) ẵm <b style="color:var(--gold)">90%</b> hũ! Trúng 3 quả giống nhau (5%) ẵm <b style="color:var(--gold)">10%</b> hũ. Hũ không bao giờ về 0. Tối đa 10 lượt/ngày, reset lúc 0h.</div>
+      <aside class="jackpot-history-panel">
+        <div class="sidebar-title">🏆 LỊCH SỬ NỔ HŨ</div>
+        <div id="jackpotHistoryList"><div class="lb-empty">Chưa có ai trúng hũ cả.</div></div>
+      </aside>
     </div>
   </div>
 
@@ -860,6 +947,7 @@ let tlState=null;
 let tlSelectedCards=new Set();
 let tlTimerInterval=null;
 let currentJackpot = 0;
+let jackpotHistoryCache = [];
 let spinsRemainingToday = 10;
 let spinInFlight = false;
 const STREET_LABELS=['Preflop','Flop','Turn','River','Ngã bài'];
@@ -987,10 +1075,14 @@ function handleServerMessage(data){
       const bigEl = document.getElementById('jackpotAmount');
       if(bigEl) bigEl.textContent = fmt(data.jackpot);
     }
+    if(data.jackpotHistory){ jackpotHistoryCache = data.jackpotHistory; renderJackpotHistory(data.jackpotHistory); }
     updateSpinButton();
   }
   else if(data.type==='spinResult'){
     finishSpinAnimation(data);
+  }
+  else if(data.type==='jackpotWin'){
+    prependJackpotHistory({username:data.username, tier:data.tier, amount:data.amount, at:data.at});
   }
   else if(data.type==='leaderboard'){
     renderLeaderboard(data.entries);
@@ -1123,10 +1215,37 @@ document.getElementById('modalConfirmBtn').addEventListener('click', ()=>{
   send({type:'adminAdjustChips', username, delta});
 });
 
+function jhTimeAgo(ts){
+  const diffSec = Math.floor((Date.now()-ts)/1000);
+  if(diffSec<60) return 'vừa xong';
+  if(diffSec<3600) return Math.floor(diffSec/60)+' phút trước';
+  if(diffSec<86400) return Math.floor(diffSec/3600)+' giờ trước';
+  return Math.floor(diffSec/86400)+' ngày trước';
+}
+function renderJackpotHistory(list){
+  const el = document.getElementById('jackpotHistoryList');
+  if(!el) return;
+  if(!list || list.length===0){ el.innerHTML = '<div class="lb-empty">Chưa có ai trúng hũ cả.</div>'; return; }
+  el.innerHTML = list.map(h=>`
+    <div class="jh-row">
+      <div class="jh-tier-badge">${h.tier==='big'?'🎉':'✨'}</div>
+      <div class="jh-info">
+        <div class="jh-name">${h.username}</div>
+        <div class="jh-amount ${h.tier==='big'?'big':'small'}">+${fmt(h.amount)} chip</div>
+      </div>
+      <div class="jh-time">${jhTimeAgo(h.at)}</div>
+    </div>
+  `).join('');
+}
+function prependJackpotHistory(entry){
+  jackpotHistoryCache.unshift(entry);
+  if(jackpotHistoryCache.length>25) jackpotHistoryCache.length = 25;
+  if(!document.getElementById('slotsScreen').classList.contains('hidden')) renderJackpotHistory(jackpotHistoryCache);
+}
+
 function updateSpinButton(){
   const btn = document.getElementById('spinBtn');
-  document.getElementById('spinsRemainingText').textContent = spinsRemainingToday;
-  btn.disabled = spinsRemainingToday<=0 || spinInFlight;
+  btn.disabled = spinInFlight;
 }
 
 document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
@@ -1161,7 +1280,7 @@ document.getElementById('slotsBackBtn').addEventListener('click', ()=>{
 
 const SLOT_SYMBOLS_CLIENT = ['🍒','🍋','🍇','🔔','💎'];
 document.getElementById('spinBtn').addEventListener('click', ()=>{
-  if(spinInFlight || spinsRemainingToday<=0) return;
+  if(spinInFlight) return;
   sfxClick();
   ensureAudio();
   spinInFlight = true;
@@ -1277,15 +1396,48 @@ document.getElementById('switchModeLink').addEventListener('click', ()=>{
   document.getElementById('switchModePrompt').textContent = authMode==='login' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?';
   document.getElementById('switchModeLink').textContent = authMode==='login' ? 'Đăng ký ngay' : 'Đăng nhập';
   document.getElementById('authError').textContent = '\u00A0';
+  document.getElementById('authPhoneLabel').classList.toggle('hidden', authMode!=='register');
+  document.getElementById('authPhone').classList.toggle('hidden', authMode!=='register');
 });
 document.getElementById('authSubmitBtn').addEventListener('click', ()=>{
   const username = document.getElementById('authUsername').value.trim();
   const password = document.getElementById('authPassword').value;
+  const phone = document.getElementById('authPhone').value.trim();
   if(!username || !password){ document.getElementById('authError').textContent='Nhập đầy đủ tên đăng nhập và mật khẩu.'; return; }
+  if(authMode==='register' && !phone){ document.getElementById('authError').textContent='Vui lòng nhập số điện thoại.'; return; }
   ensureAudio();
-  send({type: authMode, username, password});
+  send({type: authMode, username, password, phone});
 });
 document.getElementById('logoutBtn').addEventListener('click', ()=> location.reload());
+
+function openDepositWithdrawModal(mode){
+  sfxClick();
+  document.getElementById('dwModalTitle').textContent = mode==='deposit' ? 'Nạp chip' : 'Rút chip';
+  document.getElementById('dwModalSub').textContent = mode==='deposit' ? 'Chọn mốc bạn muốn nạp:' : 'Chọn mốc bạn muốn rút:';
+  document.getElementById('dwTiersList').classList.remove('hidden');
+  document.getElementById('dwContactBox').classList.add('hidden');
+  document.getElementById('depositWithdrawModal').dataset.mode = mode;
+  document.getElementById('depositWithdrawModal').classList.remove('hidden');
+}
+document.getElementById('openDepositBtn').addEventListener('click', ()=> openDepositWithdrawModal('deposit'));
+document.getElementById('openWithdrawBtn').addEventListener('click', ()=> openDepositWithdrawModal('withdraw'));
+document.getElementById('dwCloseBtn').addEventListener('click', ()=>{
+  sfxClick();
+  document.getElementById('depositWithdrawModal').classList.add('hidden');
+});
+document.querySelectorAll('.dw-tier-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    sfxClick();
+    const mode = document.getElementById('depositWithdrawModal').dataset.mode;
+    const chips = btn.dataset.chips, yen = btn.dataset.yen;
+    document.getElementById('dwTiersList').classList.add('hidden');
+    const box = document.getElementById('dwContactBox');
+    box.classList.remove('hidden');
+    document.getElementById('dwContactTitle').innerHTML = mode==='deposit'
+      ? `Bạn muốn nạp <b style="color:var(--gold)">${fmt(Number(chips))} chip</b> (${fmt(Number(yen))}円)`
+      : `Bạn muốn rút <b style="color:var(--gold)">${fmt(Number(chips))} chip</b> (nhận ${fmt(Number(yen))}円)`;
+  });
+});
 
 function renderLobby(){
   document.getElementById('lobbyUsername').textContent = me.username;
