@@ -763,6 +763,11 @@ async function handleMessage(ws, info, raw){
     return;
   }
 
+  if(data.type==='getXocDiaStatus'){
+    ws.send(JSON.stringify({type:'xocDiaStatus', history: xocDiaHistory, minBet: XOCDIA_MIN_BET}));
+    return;
+  }
+
 if(data.type==='spinSlots'){
     try{
       const multiplier = (Number(data.multiplier)===10) ? 10 : 1; // only 1x or 10x allowed
@@ -799,6 +804,54 @@ if(data.type==='spinSlots'){
     } catch(e){
       console.error('[spinSlots] error:', e);
       ws.send(JSON.stringify({type:'error', message:'Lỗi hệ thống khi quay Slots, thử lại sau.'}));
+    }
+    return;
+  }
+
+  if(data.type==='xocDiaBet'){
+    try{
+      const amount = Math.round(Number(data.amount));
+      const choice = data.choice; // 'chan' | 'le'
+      if(!Number.isFinite(amount) || amount < XOCDIA_MIN_BET){
+        ws.send(JSON.stringify({type:'error', message:`Cược tối thiểu ${XOCDIA_MIN_BET} chip.`}));
+        return;
+      }
+      if(choice!=='chan' && choice!=='le'){
+        ws.send(JSON.stringify({type:'error', message:'Chọn Chẵn hoặc Lẻ.'}));
+        return;
+      }
+      const user = await db.getUserById(info.userId);
+      if(!user){ ws.send(JSON.stringify({type:'error', message:'Không tìm thấy tài khoản.'})); return; }
+      if(user.chips < amount){
+        ws.send(JSON.stringify({type:'error', message:`Bạn không đủ chip để đặt cược này (hiện có ${user.chips}).`}));
+        return;
+      }
+
+      const balanceAfterBet = await db.adjustChips(info.userId, -amount);
+      if(balanceAfterBet===null){ ws.send(JSON.stringify({type:'error', message:'Lỗi trừ chip, thử lại sau.'})); return; }
+
+      // Shake 4 coins, each independently red/white with 50/50 odds.
+      const coins = [0,0,0,0].map(()=> Math.random()<0.5);
+      const redCount = coins.filter(Boolean).length;
+      const result = (redCount % 2 === 0) ? 'chan' : 'le';
+      const won = (result === choice);
+
+      let finalChips = balanceAfterBet;
+      let payout = 0;
+      if(won){
+        payout = amount * 2; // 1:1 payout — get bet back plus an equal win
+        const newBal = await db.adjustChips(info.userId, payout);
+        if(newBal!==null) finalChips = newBal;
+      }
+
+      recordXocDiaRound(info.username, choice, result, amount, won ? amount : -amount);
+      ws.send(JSON.stringify({
+        type:'xocDiaResult', coins, result, won, betAmount:amount, choice, payout, chips:finalChips
+      }));
+      broadcastLeaderboard();
+    } catch(e){
+      console.error('[xocDiaBet] error:', e);
+      ws.send(JSON.stringify({type:'error', message:'Lỗi hệ thống khi xóc đĩa, thử lại sau.'}));
     }
     return;
   }
@@ -1014,6 +1067,15 @@ function recordJackpotWin(username, tier, amount){
     if(cws.readyState !== WebSocket.OPEN) continue;
     try{ cws.send(JSON.stringify({type:'jackpotWin', username, tier, amount, at: Date.now()})); } catch(e){}
   }
+}
+
+// ================= Xóc Đĩa =================
+const XOCDIA_MIN_BET = 100;
+const xocDiaHistory = [];
+const XOCDIA_HISTORY_MAX = 25;
+function recordXocDiaRound(username, choice, result, betAmount, netChange){
+  xocDiaHistory.unshift({ username, choice, result, betAmount, netChange, at: Date.now() });
+  if(xocDiaHistory.length > XOCDIA_HISTORY_MAX) xocDiaHistory.length = XOCDIA_HISTORY_MAX;
 }
 
 function broadcastJackpot(amount){
