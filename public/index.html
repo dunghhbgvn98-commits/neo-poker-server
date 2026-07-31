@@ -594,7 +594,7 @@
     </div>
   </div>
 
-  <!-- LOBBY SCREEN -->
+  <!-- HOME SCREEN (Slots + jackpot history + leaderboard) -->
   <div id="lobbyScreen" class="hidden">
     <div class="topbar">
       <div class="player-chip">
@@ -614,19 +614,40 @@
     </div>
 
     <div class="jackpot-ticker" id="jackpotTicker">
-      🎰 HŨ JACKPOT: <span id="jackpotTickerAmount">...</span> chip — quay 50 chip/lượt, trúng là ẵm lớn!
+      🎰 HŨ JACKPOT: <span id="jackpotTickerAmount">...</span> chip — quay 500 chip/lượt, trúng là ẵm lớn!
     </div>
 
     <div class="lobby-body">
       <aside class="sidebar">
         <div class="sidebar-title">GAME MENU</div>
-        <div class="menu-item active" data-menu="poker">🃏 Texas Poker</div>
+        <div class="menu-item active" data-menu="home">🏠 Trang chủ</div>
+        <div class="menu-item" data-menu="poker">🃏 Texas Poker</div>
         <div class="menu-item" data-menu="tienlen">🂡 Tiến Lên</div>
-        <div class="menu-item" data-menu="slots">🎰 Slots</div>
         <div class="menu-item ghost">🎡 Roulette (sắp có)</div>
       </aside>
       <main class="tables-area">
-        <div class="table-cards" id="tableCards"></div>
+        <div class="slots-layout">
+          <div class="slots-machine">
+            <div class="jackpot-display">
+              <div class="jackpot-label">HŨ JACKPOT HIỆN TẠI</div>
+              <div class="jackpot-amount" id="jackpotAmount">...</div>
+            </div>
+            <div class="reels-row" id="reelsRow">
+              <div class="reel"><div class="reel-symbol" id="reel0">🍒</div></div>
+              <div class="reel"><div class="reel-symbol" id="reel1">🍋</div></div>
+              <div class="reel"><div class="reel-symbol" id="reel2">🍇</div></div>
+            </div>
+            <div class="spin-result" id="spinResultText">&nbsp;</div>
+            <div class="spin-btn-row">
+              <button class="btn-quickstart" id="spinBtn">🎰 QUAY (500 chip/lượt)</button>
+              <button class="btn-quickstart spin-x10-btn" id="spinX10Btn">⚡ QUAY x10 (5,000 chip)</button>
+            </div>
+          </div>
+          <aside class="jackpot-history-panel">
+            <div class="sidebar-title">🏆 LỊCH SỬ NỔ HŨ</div>
+            <div id="jackpotHistoryList"><div class="lb-empty">Chưa có ai trúng hũ cả.</div></div>
+          </aside>
+        </div>
       </main>
       <aside class="leaderboard-panel">
         <div class="sidebar-title">🏆 TOP CHIP</div>
@@ -634,6 +655,25 @@
       </aside>
     </div>
   </div>
+
+  <!-- POKER LOBBY SCREEN (table list) -->
+  <div id="pokerLobbyScreen" class="hidden">
+    <div class="topbar">
+      <div class="player-chip">
+        <div class="avatar" id="pokerLobbyAvatarInitial">?</div>
+        <div>
+          <div style="font-family:'Baloo 2',cursive; font-weight:700; font-size:14px;" id="pokerLobbyUsername"></div>
+          <div class="balance-pill">🪙 <span id="pokerLobbyChips">0</span></div>
+        </div>
+      </div>
+      <div class="brand-title"><span class="vip-badge">VIP</span> TEXAS POKER</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="pokerLobbyBackBtn" title="Về trang chủ">←</button>
+      </div>
+    </div>
+    <div class="table-cards" id="tableCards"></div>
+  </div>
+
 
   <!-- ADMIN CHIP ADJUST MODAL -->
   <div id="adminChipModal" class="modal-overlay hidden">
@@ -751,46 +791,6 @@
     </div>
   </div>
 
-  <!-- SLOTS SCREEN -->
-  <div id="slotsScreen" class="hidden">
-    <div class="topbar">
-      <div class="player-chip">
-        <div class="avatar" id="slotsAvatarInitial">?</div>
-        <div>
-          <div style="font-family:'Baloo 2',cursive; font-weight:700; font-size:14px;" id="slotsUsername"></div>
-          <div class="balance-pill" id="slotsBalancePill">🪙 <span id="slotsChips">0</span></div>
-        </div>
-      </div>
-      <div class="brand-title"><span class="vip-badge">VIP</span> SLOTS</div>
-      <div class="topbar-right">
-        <button class="icon-btn" id="slotsBackBtn" title="Về sảnh">←</button>
-      </div>
-    </div>
-
-    <div class="slots-layout">
-      <div class="slots-machine">
-        <div class="jackpot-display">
-          <div class="jackpot-label">HŨ JACKPOT HIỆN TẠI</div>
-          <div class="jackpot-amount" id="jackpotAmount">...</div>
-        </div>
-        <div class="reels-row" id="reelsRow">
-          <div class="reel"><div class="reel-symbol" id="reel0">🍒</div></div>
-          <div class="reel"><div class="reel-symbol" id="reel1">🍋</div></div>
-          <div class="reel"><div class="reel-symbol" id="reel2">🍇</div></div>
-        </div>
-        <div class="spin-result" id="spinResultText">&nbsp;</div>
-        <div class="spin-btn-row">
-          <button class="btn-quickstart" id="spinBtn">🎰 QUAY (500 chip/lượt)</button>
-          <button class="btn-quickstart spin-x10-btn" id="spinX10Btn">⚡ QUAY x10 (5,000 chip)</button>
-        </div>
-      </div>
-      <aside class="jackpot-history-panel">
-        <div class="sidebar-title">🏆 LỊCH SỬ NỔ HŨ</div>
-        <div id="jackpotHistoryList"><div class="lb-empty">Chưa có ai trúng hũ cả.</div></div>
-      </aside>
-    </div>
-  </div>
-
   <!-- GAME SCREEN -->
   <div id="gameScreen" class="hidden">
     <div class="admin-banner hidden" id="adminSpectatorBanner">🔎 Đang giám sát — bạn thấy toàn bộ bài và tỉ lệ thắng của mọi người</div>
@@ -858,6 +858,11 @@ const TIER_THEME = {
   100000:  { key:'tier-5000',  name:'Đô Thành Sang Trọng', sub:'Luxury Skyline' },
   500000: { key:'tier-10000', name:'Vegas Rực Rỡ',      sub:'Glamour Night' }
 };
+const TL_TIER_THEME = {
+  500:   { key:'tier-1000',  name:'Sảnh Khởi Đầu',    sub:'Tropic Night' },
+  5000:  { key:'tier-5000',  name:'Đô Thành Sang Trọng', sub:'Luxury Skyline' },
+  25000: { key:'tier-10000', name:'Vegas Rực Rỡ',      sub:'Glamour Night' }
+};
 function skylineSVG(tint){
   return `<svg class="skyline" viewBox="0 0 300 110" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <g fill="${tint}" opacity="0.55">
@@ -893,9 +898,9 @@ function palmSVG(){
     </g>
   </svg>`;
 }
-function sceneSVGFor(stake){
-  if(stake===10000) return palmSVG();
-  if(stake===100000) return skylineSVG('#0a1c3d');
+function sceneSVGForTier(tierIndex){
+  if(tierIndex===0) return palmSVG();
+  if(tierIndex===1) return skylineSVG('#0a1c3d');
   return skylineSVG('#3a0a26');
 }
 
@@ -983,7 +988,7 @@ function handleServerMessage(data){
   if(data.type==='lobby'){
     lobbyTables = data.tables;
     tlLobbyTables = data.tlTables || {};
-    if(!document.getElementById('lobbyScreen').classList.contains('hidden')) renderLobby();
+    if(!document.getElementById('pokerLobbyScreen').classList.contains('hidden')) renderPokerLobby();
     if(!document.getElementById('tlLobbyScreen').classList.contains('hidden')) renderTlLobby();
   }
   else if(data.type==='authOk'){
@@ -993,6 +998,7 @@ function handleServerMessage(data){
     lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
     document.getElementById('avatarInitial').textContent = me.username.charAt(0).toUpperCase();
     renderLobby();
+    send({type:'getSlotsStatus'});
   }
   else if(data.type==='authError'){
     document.getElementById('authError').textContent = data.message;
@@ -1001,7 +1007,7 @@ function handleServerMessage(data){
   else if(data.type==='joinedTable'){
     currentTableStake = data.stake;
     lsSet('neoPokerToken_'+data.stake, data.token);
-    document.getElementById('lobbyScreen').classList.add('hidden');
+    document.getElementById('pokerLobbyScreen').classList.add('hidden');
     const gs = document.getElementById('gameScreen');
     gs.classList.remove('hidden'); gs.classList.add('fade-screen');
     prevState = null;
@@ -1010,9 +1016,9 @@ function handleServerMessage(data){
     if(data.chips!==null) me.chips = data.chips;
     currentTableStake = null;
     document.getElementById('gameScreen').classList.add('hidden');
-    const lobbyEl = document.getElementById('lobbyScreen');
+    const lobbyEl = document.getElementById('pokerLobbyScreen');
     lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
-    renderLobby();
+    renderPokerLobby();
   }
   else if(data.type==='rejoinFailed'){
     // The saved token is stale (most likely: the server restarted since we last
@@ -1024,26 +1030,26 @@ function handleServerMessage(data){
       send({type:'joinTable', stake:data.stake});
     } else {
       document.getElementById('gameScreen').classList.add('hidden');
-      document.getElementById('lobbyScreen').classList.remove('hidden');
+      document.getElementById('pokerLobbyScreen').classList.remove('hidden');
     }
   }
   else if(data.type==='kickedFromTable'){
     currentTableStake = null;
     document.getElementById('gameScreen').classList.add('hidden');
-    const lobbyEl = document.getElementById('lobbyScreen');
+    const lobbyEl = document.getElementById('pokerLobbyScreen');
     lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
     showError(data.message);
-    renderLobby();
+    renderPokerLobby();
   }
   else if(data.type==='bustedOut'){
     currentTableStake = null;
     if(data.chips!==null && data.chips!==undefined) me.chips = data.chips;
     document.getElementById('gameScreen').classList.add('hidden');
-    const lobbyEl = document.getElementById('lobbyScreen');
+    const lobbyEl = document.getElementById('pokerLobbyScreen');
     lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
     showError(data.message);
     sfxError();
-    renderLobby();
+    renderPokerLobby();
   }
   else if(data.type==='accountDeleted'){
     alert(data.message);
@@ -1238,7 +1244,7 @@ function renderJackpotHistory(list){
 function prependJackpotHistory(entry){
   jackpotHistoryCache.unshift(entry);
   if(jackpotHistoryCache.length>25) jackpotHistoryCache.length = 25;
-  if(!document.getElementById('slotsScreen').classList.contains('hidden')) renderJackpotHistory(jackpotHistoryCache);
+  if(!document.getElementById('lobbyScreen').classList.contains('hidden')) renderJackpotHistory(jackpotHistoryCache);
 }
 
 function updateSpinButton(){
@@ -1251,28 +1257,33 @@ document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
     sfxClick();
     const which = item.dataset.menu;
     document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m===item));
-    if(which==='slots'){
-      document.getElementById('lobbyScreen').classList.add('hidden');
-      const ss = document.getElementById('slotsScreen');
-      ss.classList.remove('hidden'); ss.classList.add('fade-screen');
-      document.getElementById('slotsUsername').textContent = me.username;
-      document.getElementById('slotsAvatarInitial').textContent = me.username.charAt(0).toUpperCase();
-      document.getElementById('slotsChips').textContent = fmt(me.chips);
+    document.getElementById('lobbyScreen').classList.add('hidden');
+    document.getElementById('pokerLobbyScreen').classList.add('hidden');
+    document.getElementById('tlLobbyScreen').classList.add('hidden');
+    if(which==='home'){
+      const el = document.getElementById('lobbyScreen');
+      el.classList.remove('hidden'); el.classList.add('fade-screen');
+      renderLobby();
       send({type:'getSlotsStatus'});
+    } else if(which==='poker'){
+      const el = document.getElementById('pokerLobbyScreen');
+      el.classList.remove('hidden'); el.classList.add('fade-screen');
+      renderPokerLobby();
     } else if(which==='tienlen'){
-      document.getElementById('lobbyScreen').classList.add('hidden');
-      const tls = document.getElementById('tlLobbyScreen');
-      tls.classList.remove('hidden'); tls.classList.add('fade-screen');
+      const el = document.getElementById('tlLobbyScreen');
+      el.classList.remove('hidden'); el.classList.add('fade-screen');
       renderTlLobby();
     }
   });
 });
-document.getElementById('slotsBackBtn').addEventListener('click', ()=>{
+document.getElementById('pokerLobbyBackBtn').addEventListener('click', ()=>{
   sfxClick();
-  document.getElementById('slotsScreen').classList.add('hidden');
-  const lobbyEl = document.getElementById('lobbyScreen');
-  lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
-  document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m.dataset.menu==='poker'));
+  document.getElementById('pokerLobbyScreen').classList.add('hidden');
+  const el = document.getElementById('lobbyScreen');
+  el.classList.remove('hidden'); el.classList.add('fade-screen');
+  document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m.dataset.menu==='home'));
+  renderLobby();
+  send({type:'getSlotsStatus'});
 });
 
 const SLOT_SYMBOLS_CLIENT = ['🍒','🍋','🍇','🔔','💎'];
@@ -1333,7 +1344,6 @@ function finishSpinAnimation(data){
         // spin cost is always deducted regardless of outcome — reflect the fresh balance now
         if(data.chips!==null && data.chips!==undefined){
           me.chips = data.chips;
-          document.getElementById('slotsChips').textContent = fmt(me.chips);
           document.getElementById('lobbyChips').textContent = fmt(me.chips);
         }
         const resultEl = document.getElementById('spinResultText');
@@ -1385,7 +1395,6 @@ function finishMultiSpinAnimation(data){
     updateSpinButton();
     if(data.chips!==null && data.chips!==undefined){
       me.chips = data.chips;
-      document.getElementById('slotsChips').textContent = fmt(me.chips);
       document.getElementById('lobbyChips').textContent = fmt(me.chips);
     }
 
@@ -1512,6 +1521,11 @@ function renderLobby(){
   document.getElementById('lobbyUsername').textContent = me.username;
   document.getElementById('lobbyChips').textContent = fmt(me.chips);
   document.getElementById('adminTag').classList.toggle('hidden', !me.isAdmin);
+}
+
+function renderPokerLobby(){
+  document.getElementById('pokerLobbyUsername').textContent = me.username;
+  document.getElementById('pokerLobbyChips').textContent = fmt(me.chips);
 
   const container = document.getElementById('tableCards');
   container.innerHTML='';
@@ -1527,7 +1541,7 @@ function renderLobby(){
       <div class="scene">
         <div class="scene-sky"></div>
         <div class="stars"></div>
-        ${sceneSVGFor(stake)}
+        ${sceneSVGForTier(idx)}
       </div>
       <div class="content">
         <div class="tier-name">${theme.name}</div>
@@ -1557,18 +1571,18 @@ function renderLobby(){
         spectatingStake = null;
         send({type:'setSpectator', stake, enabled:false});
         document.getElementById('gameScreen').classList.add('hidden');
-        document.getElementById('lobbyScreen').classList.remove('hidden');
+        document.getElementById('pokerLobbyScreen').classList.remove('hidden');
       } else {
         spectatingStake = stake;
         send({type:'setSpectator', stake, enabled:true});
-        document.getElementById('lobbyScreen').classList.add('hidden');
+        document.getElementById('pokerLobbyScreen').classList.add('hidden');
         const gs = document.getElementById('gameScreen');
         gs.classList.remove('hidden'); gs.classList.add('fade-screen');
         document.getElementById('addBotBtn').style.display='none';
         document.getElementById('reactionBar').style.display='none';
         document.getElementById('leaveTableBtn').textContent='← Ngừng giám sát';
       }
-      renderLobby();
+      renderPokerLobby();
     });
   });
 }
@@ -1588,12 +1602,12 @@ function renderTlLobby(){
   Object.keys(tlLobbyTables).sort((a,b)=>a-b).forEach((stakeStr, idx)=>{
     const stake = Number(stakeStr);
     const t = tlLobbyTables[stakeStr];
-    const theme = TIER_THEME[stake] || {key:'tier-5000', name:'Bàn '+fmt(stake), sub:''};
+    const theme = TL_TIER_THEME[stake] || {key:'tier-5000', name:'Bàn '+fmt(stake), sub:''};
     const card = document.createElement('div');
     card.className = 'table-card ' + theme.key;
     card.style.animationDelay = (idx*0.08)+'s';
     card.innerHTML = `
-      <div class="scene"><div class="scene-sky"></div><div class="stars"></div>${sceneSVGFor(stake)}</div>
+      <div class="scene"><div class="scene-sky"></div><div class="stars"></div>${sceneSVGForTier(idx)}</div>
       <div class="content">
         <div class="tier-name">${theme.name}</div>
         <div class="tier-sub">Tiến Lên · ${fmt(stake)} chip/lá</div>
@@ -1615,7 +1629,9 @@ document.getElementById('tlLobbyBackBtn').addEventListener('click', ()=>{
   document.getElementById('tlLobbyScreen').classList.add('hidden');
   const lobbyEl = document.getElementById('lobbyScreen');
   lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
-  document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m.dataset.menu==='poker'));
+  document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m.dataset.menu==='home'));
+  renderLobby();
+  send({type:'getSlotsStatus'});
 });
 
 document.getElementById('tlAddBotBtn').addEventListener('click', ()=>{ sfxClick(); send({type:'addTlBot'}); });
@@ -1806,11 +1822,11 @@ document.getElementById('leaveTableBtn').addEventListener('click', ()=>{
     send({type:'setSpectator', stake:spectatingStake, enabled:false});
     spectatingStake=null;
     document.getElementById('gameScreen').classList.add('hidden');
-    document.getElementById('lobbyScreen').classList.remove('hidden');
+    document.getElementById('pokerLobbyScreen').classList.remove('hidden');
     document.getElementById('addBotBtn').style.display='';
     document.getElementById('reactionBar').style.display='';
     document.getElementById('leaveTableBtn').textContent='← Rời bàn';
-    renderLobby();
+    renderPokerLobby();
   } else {
     send({type:'leaveTable'});
   }
