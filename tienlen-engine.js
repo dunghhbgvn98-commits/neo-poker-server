@@ -21,8 +21,9 @@
      (Simplified: we don't continue play to rank 2nd/3rd/4th place.)
    - Chip settlement: each remaining player pays the winner
        unit * cardsLeft * multiplier
-     where unit = stake/100, and multiplier is 2x if they still hold a "2", plus
-     another 2x (so 4x total) if they never got to play a single card ("cóng").
+     where unit = the table's chip-per-card rate (500/5,000/25,000), and multiplier
+     is 2x if they still hold a "2", plus another 2x (so 4x total) if they never got
+     to play a single card ("cóng").
 */
 
 const SUITS = ['S','C','D','H'];
@@ -248,8 +249,8 @@ function advanceTurnAfterPlay(game, justActedSeat){
 }
 
 function settleHand(game){
-  const stake = game.stakeForScoring || 1000;
-  const unit = Math.max(1, Math.round(stake/100));
+  const stake = game.stakeForScoring || 500;
+  const unit = stake; // `stake` now directly represents the chip-per-card rate
   const results = [];
   for(const i of seatedIndices(game)){
     const p = game.seats[i];

@@ -6,6 +6,7 @@ const eng = require('./poker-engine.js');
 const tlEng = require('./tienlen-engine.js');
 
 const TABLE_STAKES = [10000, 100000, 500000];
+const TL_TABLE_STAKES = [500, 5000, 25000]; // per-card chip unit, independent from poker buy-ins
 const RECONNECT_GRACE_MS = 3 * 60 * 1000;
 
 function createApp(db, opts={}){
@@ -16,7 +17,7 @@ const games = {};
 TABLE_STAKES.forEach(stake => { games[stake] = eng.createGame(); });
 
 const tlGames = {};
-TABLE_STAKES.forEach(stake => {
+TL_TABLE_STAKES.forEach(stake => {
   const g = tlEng.createGame();
   g.stakeForScoring = stake;
   g.queue = []; // [{userId, username, connId}]
@@ -101,7 +102,7 @@ function lobbySnapshot(){
 }
 function tlLobbySnapshot(){
   const out = {};
-  TABLE_STAKES.forEach(stake=>{
+  TL_TABLE_STAKES.forEach(stake=>{
     const g = tlGames[stake];
     out[stake] = {
       seatsFilled: tlEng.seatedIndices(g).length,
@@ -362,7 +363,7 @@ function tlBotTick(stake){
     if(game.gameOver) settleTlHand(stake).catch(e=>console.error('[tl settle] error:', e));
   } catch(e){ console.error('[tl bot tick] exception:', e); }
 }
-TABLE_STAKES.forEach(stake => setInterval(()=> tlBotTick(stake), 400));
+TL_TABLE_STAKES.forEach(stake => setInterval(()=> tlBotTick(stake), 400));
 // No-op shim: older call sites just "nudge" after an action; the ticker above does the real work.
 function maybeRunTlBot(stake){}
 
@@ -609,7 +610,7 @@ async function handleMessage(ws, info, raw){
 
   /* ---- Tiến Lên ---- */
   if(data.type==='joinTlTable'){
-    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    const stake = TL_TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
     if(!stake){ ws.send(JSON.stringify({type:'error', message:'Mức bàn không hợp lệ.'})); return; }
     if(info.tlStake!==null && info.tlStake!==undefined){ ws.send(JSON.stringify({type:'error', message:'Bạn đang ở bàn Tiến Lên khác, hãy rời bàn trước.'})); return; }
     const game = tlGames[stake];
@@ -715,7 +716,7 @@ async function handleMessage(ws, info, raw){
 
   if(data.type==='tlSetSpectator'){
     if(!info.isAdmin) return;
-    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    const stake = TL_TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
     info.tlSpectating = (data.enabled && stake) ? stake : null;
     if(stake) broadcastTlTable(stake);
     return;
@@ -723,7 +724,7 @@ async function handleMessage(ws, info, raw){
 
   if(data.type==='adminKickTlPlayer'){
     if(!info.isAdmin){ ws.send(JSON.stringify({type:'error', message:'Bạn không có quyền này.'})); return; }
-    const stake = TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
+    const stake = TL_TABLE_STAKES.includes(Number(data.stake)) ? Number(data.stake) : null;
     const seatIdx = Number(data.seatIndex);
     if(!stake || isNaN(seatIdx)){ ws.send(JSON.stringify({type:'error', message:'Thông tin không hợp lệ.'})); return; }
     const res = await kickTlSeat(stake, seatIdx);
@@ -848,6 +849,12 @@ if(data.type==='spinSlots'){
       const seatIdx = game.seats.findIndex(s=> s && !s.isBot && s.userId===targetUser.id);
       if(seatIdx!==-1) await kickSeat(stake, seatIdx, 'Tài khoản của bạn đã bị admin xoá.');
     }
+    for(const stake of TL_TABLE_STAKES){
+      const tlGame = tlGames[stake];
+      const seatIdx = tlGame.seats.findIndex(s=> s && !s.isBot && s.userId===targetUser.id);
+      if(seatIdx!==-1) await kickTlSeat(stake, seatIdx);
+      tlGame.queue = tlGame.queue.filter(q=>q.userId!==targetUser.id);
+    }
 
     const ok = await db.deleteUser(targetUser.id);
     if(!ok){ ws.send(JSON.stringify({type:'error', message:'Lỗi xoá tài khoản, thử lại sau.'})); return; }
@@ -911,9 +918,9 @@ async function executeOneSpin(userId, username){
   const result = performSpin();
   let wonAmount = 0;
   let finalChips = balanceAfterCost;
-  if(result.tier==='big' || result.tier==='small'){
-    const payoutPct = result.tier==='big' ? BIG_JACKPOT_PAYOUT_PCT : SMALL_JACKPOT_PAYOUT_PCT;
-    wonAmount = Math.round(jackpotNow * payoutPct);
+
+  if(result.tier==='jackpot50' || result.tier==='jackpot5'){
+    wonAmount = Math.round(jackpotNow * result.pct);
     const poolAfterPayout = await db.addToJackpot(-wonAmount);
     if(poolAfterPayout===null){
       console.error('[spinSlots] jackpot deduction failed to persist after a win:', db.getLastJackpotError());
@@ -924,26 +931,69 @@ async function executeOneSpin(userId, username){
     const newBal = await db.adjustChips(userId, wonAmount);
     if(newBal!==null) finalChips = newBal;
     recordJackpotWin(username, result.tier, wonAmount);
+  } else if(result.tier==='fixed'){
+    wonAmount = result.amount;
+    const newBal = await db.adjustChips(userId, wonAmount);
+    if(newBal!==null) finalChips = newBal;
   }
+
   broadcastJackpot(jackpotNow);
   return {ok:true, symbols:result.symbols, tier:result.tier, wonAmount, jackpot:jackpotNow, chips:finalChips};
 }
 
-const BIG_JACKPOT_CHANCE = 1/6000;
-const SMALL_JACKPOT_CHANCE = 1/250;
-const BIG_JACKPOT_PAYOUT_PCT = 0.90;
-const SMALL_JACKPOT_PAYOUT_PCT = 0.05;
+// ================= Slots paytable =================
+// Cost: SPIN_COST (500) per spin. Two kinds of wins:
+//  - "fixed" tiers pay a flat chip amount straight out (not tied to the shared pool).
+//  - "jackpot5"/"jackpot50" tiers pay a percentage of the shared jackpot pool (which is
+//    fed by everyone's spin cost) — same mechanism as before, just renamed/re-tuned.
+// Probabilities are checked from rarest to most common using a single roll + cumulative
+// thresholds, so there's no ambiguity about overlapping ranges.
+const FIXED_PAYOUT_TIERS = [
+  { amount:5000, chance:0.0175, symbol:'🔔' },
+  { amount:2500, chance:0.035,  symbol:'🍇' },
+  { amount:1000, chance:0.075,  symbol:'🍋' },
+  { amount:500,  chance:0.07,   symbol:'🍒' },
+  { amount:250,  chance:0.06,   symbol:null }, // "near miss" two-of-three display
+  { amount:100,  chance:0.08,   symbol:null },
+];
+const JACKPOT50_CHANCE = 1/5000;
+const JACKPOT5_CHANCE = 1/1000;
+const JACKPOT50_PAYOUT_PCT = 0.50;
+const JACKPOT5_PAYOUT_PCT = 0.05;
 
 function randomFruitSymbol(){ return SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)]; }
+function twoMatchSymbols(){
+  const matched = randomFruitSymbol();
+  let other = matched;
+  for(let attempt=0; attempt<10 && other===matched; attempt++){
+    other = randomFruitSymbol();
+  }
+  if(other===matched){
+    // extremely unlucky (or a pinned/deterministic RNG) — just force a different symbol
+    other = SLOT_SYMBOLS[(SLOT_SYMBOLS.indexOf(matched)+1) % SLOT_SYMBOLS.length];
+  }
+  const arr = [matched, matched, other];
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
 function performSpin(){
   const roll = Math.random();
-  if(roll < BIG_JACKPOT_CHANCE){
-    return { symbols:['7️⃣','7️⃣','7️⃣'], tier:'big' };
+  let cumulative = 0;
+
+  cumulative += JACKPOT50_CHANCE;
+  if(roll < cumulative) return { symbols:['7️⃣','7️⃣','7️⃣'], tier:'jackpot50', pct:JACKPOT50_PAYOUT_PCT };
+
+  cumulative += JACKPOT5_CHANCE;
+  if(roll < cumulative) return { symbols:['💎','💎','💎'], tier:'jackpot5', pct:JACKPOT5_PAYOUT_PCT };
+
+  for(const t of FIXED_PAYOUT_TIERS){
+    cumulative += t.chance;
+    if(roll < cumulative){
+      const symbols = t.symbol ? [t.symbol,t.symbol,t.symbol] : twoMatchSymbols();
+      return { symbols, tier:'fixed', amount:t.amount };
+    }
   }
-  if(roll < BIG_JACKPOT_CHANCE + SMALL_JACKPOT_CHANCE){
-    const sym = randomFruitSymbol();
-    return { symbols:[sym,sym,sym], tier:'small' };
-  }
+
   // No win — pick 3 random symbols, but reroll if they accidentally all match
   // (would look like a win to the player even though it isn't one).
   let symbols;
@@ -1081,7 +1131,7 @@ return { server, games, db, listen: (port=PORT)=> new Promise(resolve=>{
 }) };
 } // end createApp
 
-module.exports = { createApp, TABLE_STAKES };
+module.exports = { createApp, TABLE_STAKES, TL_TABLE_STAKES };
 
 /* ================= Real runtime entry point ================= */
 if(require.main === module){
