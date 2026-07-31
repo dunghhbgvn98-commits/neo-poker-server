@@ -295,6 +295,45 @@
   .spin-multi-summary{background:rgba(255,213,74,.08); border:1px solid rgba(255,213,74,.3); border-radius:12px; padding:10px; margin-top:10px; font-family:'Nunito'; font-size:12px; color:var(--text-dim); text-align:left;}
   .spin-multi-summary .smx-row{display:flex; justify-content:space-between; padding:2px 0;}
   .spin-multi-summary .smx-win{color:var(--gold); font-weight:800;}
+
+  .xd-bowl{
+    display:flex; gap:12px; justify-content:center; align-items:center; margin:18px 0;
+    background:radial-gradient(ellipse at center, #2a1a0c, #160a35 75%);
+    border-radius:50%; padding:28px 20px; box-shadow:inset 0 8px 20px rgba(0,0,0,.6), 0 0 0 4px rgba(255,213,74,.25);
+  }
+  .xd-coin{
+    width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'Baloo 2',cursive; font-weight:800; font-size:18px; color:#fff;
+    background:linear-gradient(180deg, #6b3fd6, #4322a0); box-shadow:0 4px 10px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.25);
+    transition:transform .2s, background .2s;
+  }
+  .xd-coin.shaking{animation:xdShake 0.15s ease-in-out infinite;}
+  @keyframes xdShake{0%,100%{transform:translate(0,0) rotate(0);} 25%{transform:translate(-3px,2px) rotate(-8deg);} 50%{transform:translate(3px,-2px) rotate(8deg);} 75%{transform:translate(-2px,-2px) rotate(-4deg);}}
+  .xd-coin.red{background:linear-gradient(180deg, #f472b6, #c0304a); box-shadow:0 4px 10px rgba(192,48,74,.5), inset 0 1px 0 rgba(255,255,255,.35);}
+  .xd-coin.white{background:linear-gradient(180deg, #f8fafc, #cbd5e1); color:#1c1030; box-shadow:0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6);}
+
+  .xd-bet-row{display:flex; align-items:center; gap:10px; justify-content:center; margin:14px 0 10px;}
+  .xd-bet-label{font-family:'Nunito'; font-weight:700; font-size:12px; color:var(--text-dim);}
+  .xd-bet-row input{
+    width:130px; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
+    background:rgba(0,0,0,.3); color:#fff; font-family:'Baloo 2',cursive; font-weight:700; font-size:14px; text-align:center;
+  }
+  .xd-choice-row{display:flex; gap:10px; margin-bottom:6px;}
+  .xd-choice-btn{
+    flex:1; padding:14px; border-radius:12px; border:none; cursor:pointer;
+    font-family:'Baloo 2',cursive; font-weight:800; font-size:16px; letter-spacing:.04em; color:#fff;
+  }
+  #xdChanBtn{background:linear-gradient(180deg, #34d399, #0d9268); box-shadow:0 4px 0 #076347;}
+  #xdLeBtn{background:linear-gradient(180deg, #f472b6, #c02a72); box-shadow:0 4px 0 #8a1a52;}
+  .xd-choice-btn:active:not(:disabled){transform:translateY(3px); box-shadow:none;}
+  .xd-choice-btn:disabled{opacity:.5; cursor:not-allowed;}
+  .xd-note{font-family:'Nunito'; font-size:11px; color:var(--text-dim); margin-top:10px;}
+  .xd-history-row{display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid rgba(255,255,255,.06);}
+  .xd-history-row:last-child{border-bottom:none;}
+  .xd-h-name{font-family:'Nunito'; font-weight:700; font-size:11.5px; color:#fff; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .xd-h-result{font-family:'Baloo 2',cursive; font-weight:700; font-size:11px; padding:2px 7px; border-radius:8px;}
+  .xd-h-result.win{background:rgba(52,211,153,.2); color:#6ee7a4;}
+  .xd-h-result.lose{background:rgba(224,80,110,.2); color:#ff8fa3;}
   .slots-machine.jackpot-shake{animation:jackpotShake 0.6s cubic-bezier(.3,.2,.2,1);}
   @keyframes jackpotShake{
     0%,100%{transform:translateX(0);}
@@ -623,6 +662,7 @@
         <div class="menu-item active" data-menu="home">🏠 Trang chủ</div>
         <div class="menu-item" data-menu="poker">🃏 Texas Poker</div>
         <div class="menu-item" data-menu="tienlen">🂡 Tiến Lên</div>
+        <div class="menu-item" data-menu="xocdia">🎲 Xóc Đĩa</div>
         <div class="menu-item ghost">🎡 Roulette (sắp có)</div>
       </aside>
       <main class="tables-area">
@@ -725,6 +765,49 @@
       <div class="modal-actions">
         <button class="modal-cancel" id="dwCloseBtn">Đóng</button>
       </div>
+    </div>
+  </div>
+
+  <!-- XÓC ĐĨA SCREEN -->
+  <div id="xocDiaScreen" class="hidden">
+    <div class="topbar">
+      <div class="player-chip">
+        <div class="avatar" id="xdAvatarInitial">?</div>
+        <div>
+          <div style="font-family:'Baloo 2',cursive; font-weight:700; font-size:14px;" id="xdUsername"></div>
+          <div class="balance-pill">🪙 <span id="xdChips">0</span></div>
+        </div>
+      </div>
+      <div class="brand-title"><span class="vip-badge">VIP</span> XÓC ĐĨA</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="xdBackBtn" title="Về trang chủ">←</button>
+      </div>
+    </div>
+
+    <div class="slots-layout">
+      <div class="slots-machine">
+        <div class="jackpot-label" style="margin-bottom:10px;">LẮC ĐĨA — ĐOÁN CHẴN LẺ</div>
+        <div class="xd-bowl" id="xdBowl">
+          <div class="xd-coin" id="xdCoin0">?</div>
+          <div class="xd-coin" id="xdCoin1">?</div>
+          <div class="xd-coin" id="xdCoin2">?</div>
+          <div class="xd-coin" id="xdCoin3">?</div>
+        </div>
+        <div class="spin-result" id="xdResultText">&nbsp;</div>
+        <div class="xd-bet-row">
+          <label class="xd-bet-label">Số chip cược</label>
+          <input type="number" id="xdBetInput" value="500" min="100" step="100">
+        </div>
+        <div class="xd-choice-row">
+          <button class="xd-choice-btn" id="xdChanBtn" data-choice="chan">CHẴN</button>
+          <button class="xd-choice-btn" id="xdLeBtn" data-choice="le">LẺ</button>
+        </div>
+        <div class="xd-note">Đoán đúng ăn 1:1 (cược 500, trúng nhận 1.000). Cược tối thiểu 100 chip.</div>
+      </div>
+      <aside class="jackpot-history-panel">
+        <div class="sidebar-title">🎲 LỊCH SỬ VÁN GẦN ĐÂY</div>
+        <div id="xdHistoryList"><div class="lb-empty">Chưa có ai chơi cả.</div></div>
+      </aside>
     </div>
   </div>
 
@@ -962,6 +1045,8 @@ let tlSelectedCards=new Set();
 let tlTimerInterval=null;
 let currentJackpot = 0;
 let jackpotHistoryCache = [];
+let xdInFlight = false;
+let xdHistoryCache = [];
 let spinsRemainingToday = 10;
 let spinInFlight = false;
 const STREET_LABELS=['Preflop','Flop','Turn','River','Ngã bài'];
@@ -1075,6 +1160,16 @@ function handleServerMessage(data){
       if(resEl){ resEl.textContent = 'Lỗi: '+data.message; resEl.className = 'spin-result'; }
       updateSpinButton();
     }
+    if(typeof xdInFlight!=='undefined' && xdInFlight){
+      clearInterval(window._xdShakeInterval);
+      clearTimeout(window._xdSafetyTimeout);
+      xdInFlight = false;
+      [0,1,2,3].forEach(i=>{ const el=document.getElementById('xdCoin'+i); if(el) el.classList.remove('shaking'); });
+      document.getElementById('xdChanBtn').disabled = false;
+      document.getElementById('xdLeBtn').disabled = false;
+      const xdResEl = document.getElementById('xdResultText');
+      if(xdResEl) xdResEl.textContent = 'Lỗi: '+data.message;
+    }
   }
   else if(data.type==='state'){
     const newState = data.state;
@@ -1108,6 +1203,13 @@ function handleServerMessage(data){
   }
   else if(data.type==='spinResultMulti'){
     finishMultiSpinAnimation(data);
+  }
+  else if(data.type==='xocDiaStatus'){
+    xdHistoryCache = data.history || [];
+    renderXdHistory(xdHistoryCache);
+  }
+  else if(data.type==='xocDiaResult'){
+    finishXocDiaAnimation(data);
   }
   else if(data.type==='jackpotWin'){
     prependJackpotHistory({username:data.username, tier:data.tier, amount:data.amount, at:data.at});
@@ -1260,6 +1362,7 @@ document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
     document.getElementById('lobbyScreen').classList.add('hidden');
     document.getElementById('pokerLobbyScreen').classList.add('hidden');
     document.getElementById('tlLobbyScreen').classList.add('hidden');
+    document.getElementById('xocDiaScreen').classList.add('hidden');
     if(which==='home'){
       const el = document.getElementById('lobbyScreen');
       el.classList.remove('hidden'); el.classList.add('fade-screen');
@@ -1273,6 +1376,13 @@ document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
       const el = document.getElementById('tlLobbyScreen');
       el.classList.remove('hidden'); el.classList.add('fade-screen');
       renderTlLobby();
+    } else if(which==='xocdia'){
+      const el = document.getElementById('xocDiaScreen');
+      el.classList.remove('hidden'); el.classList.add('fade-screen');
+      document.getElementById('xdUsername').textContent = me.username;
+      document.getElementById('xdAvatarInitial').textContent = me.username.charAt(0).toUpperCase();
+      document.getElementById('xdChips').textContent = fmt(me.chips);
+      send({type:'getXocDiaStatus'});
     }
   });
 });
@@ -1285,6 +1395,102 @@ document.getElementById('pokerLobbyBackBtn').addEventListener('click', ()=>{
   renderLobby();
   send({type:'getSlotsStatus'});
 });
+
+/* ================= Xóc Đĩa ================= */
+
+document.getElementById('xdBackBtn').addEventListener('click', ()=>{
+  sfxClick();
+  document.getElementById('xocDiaScreen').classList.add('hidden');
+  const el = document.getElementById('lobbyScreen');
+  el.classList.remove('hidden'); el.classList.add('fade-screen');
+  document.querySelectorAll('.menu-item[data-menu]').forEach(m=>m.classList.toggle('active', m.dataset.menu==='home'));
+  renderLobby();
+  send({type:'getSlotsStatus'});
+});
+
+function xdPlaceBet(choice){
+  if(xdInFlight) return;
+  const amount = parseInt(document.getElementById('xdBetInput').value, 10);
+  if(!amount || amount < 100){ showError('Cược tối thiểu 100 chip.'); return; }
+  if(amount > me.chips){ showError('Bạn không đủ chip để đặt cược này.'); return; }
+  sfxClick();
+  ensureAudio();
+  xdInFlight = true;
+  document.getElementById('xdChanBtn').disabled = true;
+  document.getElementById('xdLeBtn').disabled = true;
+  document.getElementById('xdResultText').textContent = '\u00A0';
+  document.getElementById('xdResultText').className = 'spin-result';
+
+  const coinEls = [0,1,2,3].map(i=>document.getElementById('xdCoin'+i));
+  coinEls.forEach(el=>{ el.classList.add('shaking'); el.classList.remove('red','white'); el.textContent='?'; });
+  const shakeInterval = setInterval(()=>{ beep(200+Math.random()*150, 0.03, 'square', 0.03); }, 120);
+  window._xdShakeInterval = shakeInterval;
+
+  send({type:'xocDiaBet', amount, choice});
+  clearTimeout(window._xdSafetyTimeout);
+  window._xdSafetyTimeout = setTimeout(()=>{
+    if(!xdInFlight) return;
+    clearInterval(window._xdShakeInterval);
+    xdInFlight = false;
+    coinEls.forEach(el=> el.classList.remove('shaking'));
+    document.getElementById('xdChanBtn').disabled = false;
+    document.getElementById('xdLeBtn').disabled = false;
+    document.getElementById('xdResultText').textContent = 'Không nhận được phản hồi từ server — thử lại nhé.';
+  }, 8000);
+}
+document.getElementById('xdChanBtn').addEventListener('click', ()=> xdPlaceBet('chan'));
+document.getElementById('xdLeBtn').addEventListener('click', ()=> xdPlaceBet('le'));
+
+function finishXocDiaAnimation(data){
+  clearTimeout(window._xdSafetyTimeout);
+  clearInterval(window._xdShakeInterval);
+  const coinEls = [0,1,2,3].map(i=>document.getElementById('xdCoin'+i));
+  setTimeout(()=>{
+    data.coins.forEach((isRed, i)=>{
+      setTimeout(()=>{
+        coinEls[i].classList.remove('shaking');
+        coinEls[i].classList.add(isRed?'red':'white');
+        coinEls[i].textContent = isRed ? '●' : '○';
+        sfxChip();
+        if(i===3){
+          xdInFlight = false;
+          document.getElementById('xdChanBtn').disabled = false;
+          document.getElementById('xdLeBtn').disabled = false;
+          if(data.chips!==null && data.chips!==undefined){
+            me.chips = data.chips;
+            document.getElementById('xdChips').textContent = fmt(me.chips);
+            document.getElementById('lobbyChips').textContent = fmt(me.chips);
+          }
+          const resultEl = document.getElementById('xdResultText');
+          const resultLabel = data.result==='chan' ? 'CHẴN' : 'LẺ';
+          if(data.won){
+            resultEl.innerHTML = `🎉 ${resultLabel}! Bạn thắng <b style="color:var(--gold)">+${fmt(data.betAmount)}</b> chip!`;
+            resultEl.className = 'spin-result big-win';
+            sfxWin();
+            spawnConfettiAt(document.querySelector('.slots-machine'), 50, 40, 20);
+          } else {
+            resultEl.innerHTML = `${resultLabel} — bạn thua <b style="color:#ff8fa3">-${fmt(data.betAmount)}</b> chip.`;
+            resultEl.className = 'spin-result';
+          }
+          xdHistoryCache.unshift({username:me.username, choice:data.choice, result:data.result, betAmount:data.betAmount, netChange: data.won?data.betAmount:-data.betAmount, at:Date.now()});
+          if(xdHistoryCache.length>25) xdHistoryCache.length=25;
+          renderXdHistory(xdHistoryCache);
+        }
+      }, i*150);
+    });
+  }, 500);
+}
+function renderXdHistory(list){
+  const el = document.getElementById('xdHistoryList');
+  if(!el) return;
+  if(!list || list.length===0){ el.innerHTML = '<div class="lb-empty">Chưa có ai chơi cả.</div>'; return; }
+  el.innerHTML = list.map(h=>`
+    <div class="xd-history-row">
+      <div class="xd-h-name">${h.username}</div>
+      <span class="xd-h-result ${h.netChange>=0?'win':'lose'}">${h.result==='chan'?'Chẵn':'Lẻ'} · ${h.netChange>=0?'+':''}${fmt(h.netChange)}</span>
+    </div>
+  `).join('');
+}
 
 const SLOT_SYMBOLS_CLIENT = ['🍒','🍋','🍇','🔔','💎'];
 function startSpin(multiplier){
