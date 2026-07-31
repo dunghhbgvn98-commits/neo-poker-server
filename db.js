@@ -30,7 +30,7 @@ function createDb(supabase){
 
     const hash = await bcrypt.hash(password, 10);
     const { data, error } = await supabase
-      .from('users').insert({username, password_hash:hash, chips:5000, phone:cleanPhone}).select().single();
+      .from('users').insert({username, password_hash:hash, chips:20000, phone:cleanPhone}).select().single();
     if(error) return {ok:false, reason:'Lỗi tạo tài khoản: '+error.message};
     return {ok:true, user:data};
   }

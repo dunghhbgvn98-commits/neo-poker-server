@@ -5,7 +5,7 @@ const WebSocket = require('ws');
 const eng = require('./poker-engine.js');
 const tlEng = require('./tienlen-engine.js');
 
-const TABLE_STAKES = [1000, 5000, 10000];
+const TABLE_STAKES = [10000, 100000, 500000];
 const RECONNECT_GRACE_MS = 3 * 60 * 1000;
 
 function createApp(db, opts={}){
@@ -268,6 +268,41 @@ function broadcastLobby(){
 }
 
 /* ================= Bot turn scheduling (per table) ================= */
+// Automatically removes any seat whose stack hit 0 once the hand is fully over (never
+// touched mid-hand — the engine still needs that seat's data to resolve the current
+// showdown/side-pots correctly). Busted humans are notified so their client returns
+// to the lobby; they can freely rejoin later if their account balance still allows it.
+async function clearBustedSeats(stake){
+  const game = games[stake];
+  if(game.inHand && !game.handOver) return false;
+  let anyCleared = false;
+  for(let i=0;i<eng.MAX_SEATS;i++){
+    const p = game.seats[i];
+    if(p && p.chips<=0){
+      if(!p.isBot){
+        for(const [cws, cinfo] of clients){
+          if(cinfo.tableStake===stake && cinfo.seatIndex===i){
+            let freshChips = null;
+            try{ const u = await db.getUserById(cinfo.userId); if(u) freshChips = u.chips; }catch(e){}
+            try{ cws.send(JSON.stringify({type:'bustedOut', message:'Bạn đã hết chip và bị out khỏi bàn. Vào lại nếu tài khoản vẫn còn chip nhé!', chips: freshChips})); }catch(e){}
+            cinfo.tableStake = null; cinfo.seatIndex = null;
+          }
+        }
+      }
+      game.seats[i] = null;
+      anyCleared = true;
+    }
+  }
+  if(anyCleared){
+    const anyHuman = game.seats.some(s=> s && !s.isBot);
+    if(!anyHuman){
+      for(let i=0;i<eng.MAX_SEATS;i++){ if(game.seats[i] && game.seats[i].isBot) game.seats[i] = null; }
+    }
+    broadcastLobby();
+  }
+  return anyCleared;
+}
+
 function maybeRunBot(stake){
   clearTimeout(botTimers[stake]);
   const game = games[stake];
@@ -276,13 +311,14 @@ function maybeRunBot(stake){
   if(idx===-1) return;
   const p = game.seats[idx];
   if(!p || !p.isBot) return;
-  botTimers[stake] = setTimeout(()=>{
+  botTimers[stake] = setTimeout(async ()=>{
     try{
       if(!game.inHand || game.handOver) return;
       const eqMap = computeAllEquitiesForTable(stake, game);
       const dec = eng.botDecision(game, idx, eqMap);
       const res = eng.processAction(game, idx, dec.action, dec.amount);
       if(!res.ok) console.error('[bot] action failed:', res.reason);
+      if(game.handOver) await clearBustedSeats(stake);
       broadcastTable(stake);
       maybeRunBot(stake);
     } catch(e){ console.error('[bot] exception:', e); }
@@ -539,6 +575,7 @@ async function handleMessage(ws, info, raw){
     const stake = info.tableStake;
     const game = games[stake];
     if(game.inHand) return;
+    await clearBustedSeats(stake); // safety net: clear any lingering 0-chip seat before dealing
     const res = eng.startHand(game);
     if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
     broadcastTable(stake);
@@ -552,6 +589,7 @@ async function handleMessage(ws, info, raw){
     const game = games[stake];
     const res = eng.processAction(game, info.seatIndex, data.action, data.amount);
     if(!res.ok){ ws.send(JSON.stringify({type:'error', message:res.reason})); return; }
+    if(game.handOver) await clearBustedSeats(stake);
     broadcastTable(stake);
     maybeRunBot(stake);
     return;
@@ -724,61 +762,38 @@ async function handleMessage(ws, info, raw){
     return;
   }
 
-  if(data.type==='spinSlots'){
+if(data.type==='spinSlots'){
     try{
-      const user = await db.getUserById(info.userId);
-      if(!user){ ws.send(JSON.stringify({type:'error', message:'Không tìm thấy tài khoản.'})); return; }
-      if(user.chips < SPIN_COST){
-        ws.send(JSON.stringify({type:'error', message:`Bạn cần tối thiểu ${SPIN_COST} chip để quay (hiện có ${user.chips}).`}));
-        return;
-      }
-      const consume = await db.checkAndConsumeSpin(info.userId);
-      if(!consume.ok){
-        ws.send(JSON.stringify({type:'error', message: consume.reason}));
-        const jp = await db.getJackpot();
-        ws.send(JSON.stringify({type:'slotsStatus', jackpot: jp, spinsRemaining: consume.spinsRemaining, dailyLimit: db.DAILY_SPIN_LIMIT, jackpotHistory}));
-        return;
-      }
+      const multiplier = (Number(data.multiplier)===10) ? 10 : 1; // only 1x or 10x allowed
 
-      // Charge the spin cost up front (this is what feeds the jackpot pool now — spins are no longer free).
-      const balanceAfterCost = await db.adjustChips(info.userId, -SPIN_COST);
-      if(balanceAfterCost===null){ ws.send(JSON.stringify({type:'error', message:'Lỗi trừ chip, thử lại sau.'})); return; }
-
-      let jackpotNow = await db.addToJackpot(SPIN_COST);
-      if(jackpotNow===null){
-        ws.send(JSON.stringify({type:'error', message:'Không cập nhật được hũ jackpot. Chi tiết: ' + (db.getLastJackpotError() || 'không rõ nguyên nhân') }));
-        // refund the spin cost since we couldn't actually process the spin
-        await db.adjustChips(info.userId, SPIN_COST);
+      if(multiplier===1){
+        const r = await executeOneSpin(info.userId, info.username);
+        if(!r.ok){ ws.send(JSON.stringify({type:'error', message:r.error})); return; }
+        ws.send(JSON.stringify({
+          type:'spinResult', symbols:r.symbols, tier:r.tier, wonAmount:r.wonAmount,
+          jackpot:r.jackpot, spinsRemaining:null, chips:r.chips, spinCost:SPIN_COST
+        }));
+        broadcastLeaderboard();
         return;
       }
 
-      const result = performSpin();
-      let wonAmount = 0;
-      let finalChips = balanceAfterCost;
-      if(result.tier==='big' || result.tier==='small'){
-        const payoutPct = result.tier==='big' ? BIG_JACKPOT_PAYOUT_PCT : SMALL_JACKPOT_PAYOUT_PCT;
-        wonAmount = Math.round(jackpotNow * payoutPct);
-        // Actually persist the deduction via the same atomic RPC (previously this was only
-        // computed in a local variable and never written back to the database — a real bug
-        // where the pool shown/reset never matched what was stored).
-        const poolAfterPayout = await db.addToJackpot(-wonAmount);
-        if(poolAfterPayout===null){
-          console.error('[spinSlots] jackpot deduction failed to persist after a win:', db.getLastJackpotError());
-          jackpotNow = jackpotNow - wonAmount; // best-effort local fallback for this response only
-        } else {
-          jackpotNow = poolAfterPayout;
-        }
-        const newBal = await db.adjustChips(info.userId, wonAmount);
-        if(newBal!==null) finalChips = newBal;
-        recordJackpotWin(info.username, result.tier, wonAmount);
+      // x10: run up to 10 spins back-to-back server-side, stopping early if chips run out.
+      const results = [];
+      let totalCost = 0, totalWon = 0, lastChips = null, lastJackpot = null, stopReason = null;
+      for(let i=0;i<multiplier;i++){
+        const r = await executeOneSpin(info.userId, info.username);
+        if(!r.ok){ stopReason = r.error; break; }
+        results.push({symbols:r.symbols, tier:r.tier, wonAmount:r.wonAmount});
+        totalCost += SPIN_COST;
+        totalWon += r.wonAmount;
+        lastChips = r.chips;
+        lastJackpot = r.jackpot;
       }
-
       ws.send(JSON.stringify({
-        type:'spinResult', symbols: result.symbols, tier: result.tier, wonAmount,
-        jackpot: jackpotNow, spinsRemaining: consume.spinsRemaining,
-        chips: finalChips, spinCost: SPIN_COST
+        type:'spinResultMulti', results, totalCost, totalWon,
+        chips:lastChips, jackpot:lastJackpot, spinCost:SPIN_COST,
+        stoppedEarly: results.length<multiplier, stopReason
       }));
-      broadcastJackpot(jackpotNow);
       broadcastLeaderboard();
     } catch(e){
       console.error('[spinSlots] error:', e);
@@ -875,11 +890,49 @@ async function broadcastLeaderboard(){
 setInterval(()=>{ broadcastLeaderboard(); }, 8000);
 
 const SLOT_SYMBOLS = ['🍒','🍋','🍇','🔔','💎'];
-const SPIN_COST = 50;
-const BIG_JACKPOT_CHANCE = 0.005;   // 0.5%
-const SMALL_JACKPOT_CHANCE = 0.05;  // 5%
+const SPIN_COST = 500;
+
+// Executes exactly one spin end-to-end (charge cost, grow the pool, roll outcome,
+// pay out + persist any win). Shared by both the single-spin and x10 multi-spin paths.
+async function executeOneSpin(userId, username){
+  const user = await db.getUserById(userId);
+  if(!user) return {ok:false, error:'Không tìm thấy tài khoản.'};
+  if(user.chips < SPIN_COST) return {ok:false, error:`Bạn cần tối thiểu ${SPIN_COST} chip để quay (hiện có ${user.chips}).`};
+
+  const balanceAfterCost = await db.adjustChips(userId, -SPIN_COST);
+  if(balanceAfterCost===null) return {ok:false, error:'Lỗi trừ chip, thử lại sau.'};
+
+  let jackpotNow = await db.addToJackpot(SPIN_COST);
+  if(jackpotNow===null){
+    await db.adjustChips(userId, SPIN_COST); // refund — spin never actually happened
+    return {ok:false, error:'Không cập nhật được hũ jackpot. Chi tiết: ' + (db.getLastJackpotError() || 'không rõ nguyên nhân')};
+  }
+
+  const result = performSpin();
+  let wonAmount = 0;
+  let finalChips = balanceAfterCost;
+  if(result.tier==='big' || result.tier==='small'){
+    const payoutPct = result.tier==='big' ? BIG_JACKPOT_PAYOUT_PCT : SMALL_JACKPOT_PAYOUT_PCT;
+    wonAmount = Math.round(jackpotNow * payoutPct);
+    const poolAfterPayout = await db.addToJackpot(-wonAmount);
+    if(poolAfterPayout===null){
+      console.error('[spinSlots] jackpot deduction failed to persist after a win:', db.getLastJackpotError());
+      jackpotNow = jackpotNow - wonAmount;
+    } else {
+      jackpotNow = poolAfterPayout;
+    }
+    const newBal = await db.adjustChips(userId, wonAmount);
+    if(newBal!==null) finalChips = newBal;
+    recordJackpotWin(username, result.tier, wonAmount);
+  }
+  broadcastJackpot(jackpotNow);
+  return {ok:true, symbols:result.symbols, tier:result.tier, wonAmount, jackpot:jackpotNow, chips:finalChips};
+}
+
+const BIG_JACKPOT_CHANCE = 1/6000;
+const SMALL_JACKPOT_CHANCE = 1/250;
 const BIG_JACKPOT_PAYOUT_PCT = 0.90;
-const SMALL_JACKPOT_PAYOUT_PCT = 0.10;
+const SMALL_JACKPOT_PAYOUT_PCT = 0.05;
 
 function randomFruitSymbol(){ return SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)]; }
 function performSpin(){
