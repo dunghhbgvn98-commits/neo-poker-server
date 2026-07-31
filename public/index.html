@@ -288,6 +288,13 @@
   .reel.small-win-glow{box-shadow:inset 0 0 0 3px #22d3ee, 0 0 20px rgba(34,211,238,.7); animation:smallWinGlow 1s ease-in-out infinite;}
   @keyframes smallWinGlow{0%,100%{box-shadow:inset 0 0 0 3px #22d3ee, 0 0 14px rgba(34,211,238,.5);} 50%{box-shadow:inset 0 0 0 3px #67e8f9, 0 0 22px rgba(34,211,238,.85);}}
   .spin-result.small-win{color:#22d3ee; font-size:16px; text-shadow:0 0 10px rgba(34,211,238,.6);}
+  .spin-btn-row{display:flex; gap:8px;}
+  .spin-btn-row .btn-quickstart{margin-top:0; font-size:13px; padding:12px 8px;}
+  .spin-x10-btn{background:linear-gradient(180deg, #f472b6, #c02a72) !important; box-shadow:0 6px 0 #8a1a52, 0 10px 24px -6px rgba(192,42,114,.6), inset 0 1px 0 rgba(255,255,255,.5) !important;}
+  .spin-x10-btn:active:not(:disabled){box-shadow:0 2px 0 #8a1a52 !important;}
+  .spin-multi-summary{background:rgba(255,213,74,.08); border:1px solid rgba(255,213,74,.3); border-radius:12px; padding:10px; margin-top:10px; font-family:'Nunito'; font-size:12px; color:var(--text-dim); text-align:left;}
+  .spin-multi-summary .smx-row{display:flex; justify-content:space-between; padding:2px 0;}
+  .spin-multi-summary .smx-win{color:var(--gold); font-weight:800;}
   .slots-machine.jackpot-shake{animation:jackpotShake 0.6s cubic-bezier(.3,.2,.2,1);}
   @keyframes jackpotShake{
     0%,100%{transform:translateX(0);}
@@ -772,7 +779,10 @@
           <div class="reel"><div class="reel-symbol" id="reel2">🍇</div></div>
         </div>
         <div class="spin-result" id="spinResultText">&nbsp;</div>
-        <button class="btn-quickstart" id="spinBtn">🎰 QUAY (50 chip/lượt)</button>
+        <div class="spin-btn-row">
+          <button class="btn-quickstart" id="spinBtn">🎰 QUAY (500 chip/lượt)</button>
+          <button class="btn-quickstart spin-x10-btn" id="spinX10Btn">⚡ QUAY x10 (5,000 chip)</button>
+        </div>
       </div>
       <aside class="jackpot-history-panel">
         <div class="sidebar-title">🏆 LỊCH SỬ NỔ HŨ</div>
@@ -844,9 +854,9 @@ function rankLabel(r){return RANK_LABEL[r]||String(r);}
 function fmt(n){return Math.round(n).toLocaleString('en-US');}
 
 const TIER_THEME = {
-  1000:  { key:'tier-1000',  name:'Sảnh Khởi Đầu',    sub:'Tropic Night' },
-  5000:  { key:'tier-5000',  name:'Đô Thành Sang Trọng', sub:'Luxury Skyline' },
-  10000: { key:'tier-10000', name:'Vegas Rực Rỡ',      sub:'Glamour Night' }
+  10000:  { key:'tier-1000',  name:'Sảnh Khởi Đầu',    sub:'Tropic Night' },
+  100000:  { key:'tier-5000',  name:'Đô Thành Sang Trọng', sub:'Luxury Skyline' },
+  500000: { key:'tier-10000', name:'Vegas Rực Rỡ',      sub:'Glamour Night' }
 };
 function skylineSVG(tint){
   return `<svg class="skyline" viewBox="0 0 300 110" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -884,8 +894,8 @@ function palmSVG(){
   </svg>`;
 }
 function sceneSVGFor(stake){
-  if(stake===1000) return palmSVG();
-  if(stake===5000) return skylineSVG('#0a1c3d');
+  if(stake===10000) return palmSVG();
+  if(stake===100000) return skylineSVG('#0a1c3d');
   return skylineSVG('#3a0a26');
 }
 
@@ -1025,6 +1035,16 @@ function handleServerMessage(data){
     showError(data.message);
     renderLobby();
   }
+  else if(data.type==='bustedOut'){
+    currentTableStake = null;
+    if(data.chips!==null && data.chips!==undefined) me.chips = data.chips;
+    document.getElementById('gameScreen').classList.add('hidden');
+    const lobbyEl = document.getElementById('lobbyScreen');
+    lobbyEl.classList.remove('hidden'); lobbyEl.classList.add('fade-screen');
+    showError(data.message);
+    sfxError();
+    renderLobby();
+  }
   else if(data.type==='accountDeleted'){
     alert(data.message);
     location.reload();
@@ -1079,6 +1099,9 @@ function handleServerMessage(data){
   }
   else if(data.type==='spinResult'){
     finishSpinAnimation(data);
+  }
+  else if(data.type==='spinResultMulti'){
+    finishMultiSpinAnimation(data);
   }
   else if(data.type==='jackpotWin'){
     prependJackpotHistory({username:data.username, tier:data.tier, amount:data.amount, at:data.at});
@@ -1219,8 +1242,8 @@ function prependJackpotHistory(entry){
 }
 
 function updateSpinButton(){
-  const btn = document.getElementById('spinBtn');
-  btn.disabled = spinInFlight;
+  document.getElementById('spinBtn').disabled = spinInFlight;
+  document.getElementById('spinX10Btn').disabled = spinInFlight;
 }
 
 document.querySelectorAll('.menu-item[data-menu]').forEach(item=>{
@@ -1253,7 +1276,7 @@ document.getElementById('slotsBackBtn').addEventListener('click', ()=>{
 });
 
 const SLOT_SYMBOLS_CLIENT = ['🍒','🍋','🍇','🔔','💎'];
-document.getElementById('spinBtn').addEventListener('click', ()=>{
+function startSpin(multiplier){
   if(spinInFlight) return;
   sfxClick();
   ensureAudio();
@@ -1261,6 +1284,8 @@ document.getElementById('spinBtn').addEventListener('click', ()=>{
   updateSpinButton();
   document.getElementById('spinResultText').textContent = '\u00A0';
   document.getElementById('spinResultText').className = 'spin-result';
+  const oldSummary = document.querySelector('.spin-multi-summary');
+  if(oldSummary) oldSummary.remove();
   for(let i=0;i<3;i++){
     document.getElementById('reel'+i).parentElement.classList.add('spinning');
     document.getElementById('reel'+i).parentElement.classList.remove('jackpot-glow');
@@ -1273,7 +1298,7 @@ document.getElementById('spinBtn').addEventListener('click', ()=>{
     beep(300+Math.random()*200, 0.03, 'square', 0.03);
   }, 80);
   window._slotsSpinInterval = spinInterval;
-  send({type:'spinSlots'});
+  send({type:'spinSlots', multiplier});
   clearTimeout(window._slotsSpinSafetyTimeout);
   window._slotsSpinSafetyTimeout = setTimeout(()=>{
     if(!spinInFlight) return;
@@ -1284,8 +1309,10 @@ document.getElementById('spinBtn').addEventListener('click', ()=>{
     document.getElementById('spinResultText').className = 'spin-result';
     updateSpinButton();
     send({type:'getSlotsStatus'});
-  }, 6000);
-});
+  }, 12000);
+}
+document.getElementById('spinBtn').addEventListener('click', ()=> startSpin(1));
+document.getElementById('spinX10Btn').addEventListener('click', ()=> startSpin(10));
 
 function finishSpinAnimation(data){
   clearTimeout(window._slotsSpinSafetyTimeout);
@@ -1334,6 +1361,74 @@ function finishSpinAnimation(data){
       }
     }, stops[i]);
   });
+}
+
+function finishMultiSpinAnimation(data){
+  clearTimeout(window._slotsSpinSafetyTimeout);
+  clearInterval(window._slotsSpinInterval);
+  const results = data.results || [];
+  // find the most exciting outcome among the batch to display on the reels (big > small > last spin)
+  const bigWin = results.find(r=>r.tier==='big');
+  const smallWin = !bigWin ? results.find(r=>r.tier==='small') : null;
+  const highlight = bigWin || smallWin || results[results.length-1] || {symbols:['🍒','🍋','🍇'], tier:'none'};
+
+  setTimeout(()=>{
+    highlight.symbols.forEach((sym,i)=>{
+      document.getElementById('reel'+i).textContent = sym;
+      document.getElementById('reel'+i).parentElement.classList.remove('spinning');
+    });
+    sfxChip();
+
+    spinInFlight = false;
+    currentJackpot = data.jackpot;
+    if(data.jackpot!==null && data.jackpot!==undefined) document.getElementById('jackpotAmount').textContent = fmt(data.jackpot);
+    updateSpinButton();
+    if(data.chips!==null && data.chips!==undefined){
+      me.chips = data.chips;
+      document.getElementById('slotsChips').textContent = fmt(me.chips);
+      document.getElementById('lobbyChips').textContent = fmt(me.chips);
+    }
+
+    const resultEl = document.getElementById('spinResultText');
+    const machine = document.querySelector('.slots-machine');
+    const bigCount = results.filter(r=>r.tier==='big').length;
+    const smallCount = results.filter(r=>r.tier==='small').length;
+
+    if(bigWin){
+      for(let r=0;r<3;r++) document.getElementById('reel'+r).parentElement.classList.add('jackpot-glow');
+      resultEl.innerHTML = `🎉🎊 NỔ HŨ LỚN trong loạt x10! 🎊🎉`;
+      resultEl.className = 'spin-result big-win';
+      sfxWin();
+      spawnConfettiAt(machine, 50, 30, 44);
+      spawnConfettiAt(machine, 20, 20, 20);
+      spawnConfettiAt(machine, 80, 20, 20);
+      machine.classList.add('jackpot-shake');
+      setTimeout(()=> machine.classList.remove('jackpot-shake'), 700);
+    } else if(smallWin){
+      for(let r=0;r<3;r++) document.getElementById('reel'+r).parentElement.classList.add('small-win-glow');
+      resultEl.innerHTML = `✨ Có ${smallCount} lần trúng nhỏ trong loạt x10!`;
+      resultEl.className = 'spin-result small-win';
+      sfxChip(); sfxChip();
+      spawnConfettiAt(machine, 50, 30, 16);
+    } else {
+      resultEl.textContent = 'Chưa trúng lần nào trong loạt x10 — thử lại nhé!';
+      resultEl.className = 'spin-result';
+    }
+
+    // detailed summary panel
+    const net = data.totalWon - data.totalCost;
+    const summary = document.createElement('div');
+    summary.className = 'spin-multi-summary';
+    summary.innerHTML = `
+      <div class="smx-row"><span>Số lượt đã quay</span><b>${results.length}${data.stoppedEarly ? ' (dừng sớm — hết chip)' : ''}</b></div>
+      <div class="smx-row"><span>Tổng đã trừ</span><b>-${fmt(data.totalCost)} chip</b></div>
+      <div class="smx-row"><span>Tổng trúng</span><span class="smx-win">+${fmt(data.totalWon)} chip</span></div>
+      <div class="smx-row"><span>Lời/Lỗ</span><b style="color:${net>=0?'#34d399':'#ff8fa3'}">${net>=0?'+':''}${fmt(net)} chip</b></div>
+      ${bigCount>0?`<div class="smx-row"><span>🎉 Nổ hũ lớn</span><b>${bigCount} lần</b></div>`:''}
+      ${smallCount>0?`<div class="smx-row"><span>✨ Trúng nhỏ</span><b>${smallCount} lần</b></div>`:''}
+    `;
+    resultEl.insertAdjacentElement('afterend', summary);
+  }, 1200);
 }
 
 function spawnConfettiAt(container, leftPct, topPct, count){
